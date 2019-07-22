@@ -382,4 +382,34 @@ func TestBlockListener_ListenToGossipBlocks(t *testing.T) {
 	time.Sleep(1 * time.Second)
 }
 
+func TestBlockListener_HandleNewBlock(t *testing.T) {
+	r := require.New(t)
+	sim := service.NewSimulator()
+	n1 := sim.NewNode()
+	n2 := sim.NewNode()
+	//n2.RegisterGossipProtocol(NewBlockProtocol)
+
+	bl1 := ListenerFactory(n1, PeersMock{func() []p2p.Peer { return []p2p.Peer{n2.PublicKey()} }}, "TestBlockListener_ListenToGossipBlocks1", 1)
+	b := types.NewExistingBlock(types.BlockID(10), 1, []byte("data1"))
+
+	bl1.MeshDB.AddBlock(b)
+	res := bl1.HandleNewBlock(b)
+	r.True(res) // TODO: should probably be false after we fix it
+
+	b = types.NewExistingBlock(types.BlockID(5), 1, []byte("data1"))
+	b.Signature = []byte{1, 2, 3} // set wrong sig
+	_, _, e := bl1.BlockSyntacticValidation(b)
+	r.Error(e)
+	res = bl1.HandleNewBlock(b)
+	r.False(res)
+
+	// TODO: we need a mock for MeshDB. Requires a significant refactor.
+
+	signer := signing.NewEdSigner()
+	b = types.NewExistingBlock(types.BlockID(6), 1, []byte("data1"))
+	b.Signature = signer.Sign(b.Bytes())
+	res = bl1.HandleNewBlock(b)
+	r.True(res)
+}
+
 //todo integration testing
