@@ -127,7 +127,6 @@ func (vq *validationQueue) updateDependencies(block types.BlockID) []types.Block
 		blocks = append(blocks, block)
 		doneQueue = vq.removefromDepMaps(block, doneQueue)
 	}
-	return nil
 }
 
 func (vq *validationQueue) removefromDepMaps(block types.BlockID, queue []types.BlockID) []types.BlockID {
