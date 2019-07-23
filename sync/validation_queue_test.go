@@ -24,7 +24,7 @@ func TestValidationQueue_inQueue(t *testing.T) {
 
 	// exist visited
 	vq.visited[types.BlockID(2)] = struct{}{}
-	res = vq.inQueue(bid)
+	res = vq.inQueue(types.BlockID(2))
 	r.True(res)
 }
 
