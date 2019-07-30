@@ -157,22 +157,26 @@ func InitSpacemeshLoggingSystem(dataFolderPath string, logFileName string) {
 
 // Info prints formatted info level log message.
 func Info(msg string, args ...interface{}) {
+	//AppLog.Info(msg, args...)
+}
+
+func OnlyThat(msg string, args ...interface{}) {
 	AppLog.Info(msg, args...)
 }
 
 // Debug prints formatted debug level log message.
 func Debug(msg string, args ...interface{}) {
-	AppLog.Debug(msg, args...)
+	//AppLog.Debug(msg, args...)
 }
 
 // Error prints formatted error level log message.
 func Error(msg string, args ...interface{}) {
-	AppLog.Error(msg, args...)
+	//AppLog.Error(msg, args...)
 }
 
 // Warning prints formatted warning level log message.
 func Warning(msg string, args ...interface{}) {
-	AppLog.Warning(msg, args...)
+	//AppLog.Warning(msg, args...)
 }
 
 func With() fieldLogger {

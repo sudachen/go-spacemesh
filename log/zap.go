@@ -19,21 +19,25 @@ type Log struct {
 
 // Info prints formatted info level log message.
 func (l Log) Info(format string, args ...interface{}) {
-	l.sugar.Infof(format, args...)
+	//l.sugar.Infof(format, args...)
 }
 
 // Debug prints formatted debug level log message.
 func (l Log) Debug(format string, args ...interface{}) {
-	l.sugar.Debugf(format, args...)
+	//l.sugar.Debugf(format, args...)
 }
 
 // Error prints formatted error level log message.
 func (l Log) Error(format string, args ...interface{}) {
-	l.sugar.Errorf(format, args...)
+	//l.sugar.Errorf(format, args...)
 }
 
 // Warning prints formatted warning level log message.
 func (l Log) Warning(format string, args ...interface{}) {
+	//l.sugar.Warnf(format, args...)
+}
+
+func (l Log) OnlyThat(format string, args ...interface{}) {
 	l.sugar.Warnf(format, args...)
 }
 
@@ -43,8 +47,8 @@ func (l Log) Panic(format string, args ...interface{}) {
 }
 
 func (l Log) Time(start time.Time, context string) {
-	elapsed := time.Since(start)
-	l.Info("running %s took %v", context, elapsed)
+	//elapsed := time.Since(start)
+	//l.With().Info(fmt.Sprintf("running %s", method), String("context", context), Duration("took", elapsed))
 }
 
 // Wrap and export field logic
@@ -186,41 +190,45 @@ func (l Log) WithOptions(opts ...zap.Option) Log {
 const event_key = "event"
 
 func (fl fieldLogger) EventInfo(msg string, fields ...Field) {
-	fields = append(fields, Bool(event_key, true))
-	fl.l.Info(msg, unpack(fields...)...)
+	//fields = append(fields, Bool(event_key, true))
+	//fl.l.Info(msg, unpack(fields...)...)
 }
 
 func (fl fieldLogger) EventDebug(msg string, fields ...Field) {
-	fields = append(fields, Bool(event_key, true))
-	fl.l.Debug(msg, unpack(fields...)...)
+	//fields = append(fields, Bool(event_key, true))
+	//fl.l.Debug(msg, unpack(fields...)...)
 }
 
 func (fl fieldLogger) EventError(msg string, fields ...Field) {
-	fields = append(fields, Bool(event_key, true))
-	fl.l.Error(msg, unpack(fields...)...)
+	//fields = append(fields, Bool(event_key, true))
+	//fl.l.Error(msg, unpack(fields...)...)
 }
 
 func (fl fieldLogger) EventWarning(msg string, fields ...Field) {
-	fields = append(fields, Bool(event_key, true))
-	fl.l.Warn(msg, unpack(fields...)...)
+	//fields = append(fields, Bool(event_key, true))
+	//fl.l.Warn(msg, unpack(fields...)...)
 }
 
 // Info prints message with fields
 func (fl fieldLogger) Info(msg string, fields ...Field) {
+	//fl.l.Info(msg, unpack(fields...)...)
+}
+
+func (fl fieldLogger) OnlyThat(msg string, fields ...Field) {
 	fl.l.Info(msg, unpack(fields...)...)
 }
 
 // Debug prints message with fields
 func (fl fieldLogger) Debug(msg string, fields ...Field) {
-	fl.l.Debug(msg, unpack(fields...)...)
+	//fl.l.Debug(msg, unpack(fields...)...)
 }
 
 // Error prints message with fields
 func (fl fieldLogger) Error(msg string, fields ...Field) {
-	fl.l.Error(msg, unpack(fields...)...)
+	//fl.l.Error(msg, unpack(fields...)...)
 }
 
 // Warning prints message with fields
 func (fl fieldLogger) Warning(msg string, fields ...Field) {
-	fl.l.Warn(msg, unpack(fields...)...)
+	//fl.l.Warn(msg, unpack(fields...)...)
 }

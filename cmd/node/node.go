@@ -221,7 +221,7 @@ func (app *SpacemeshApp) setupLogging() {
 	// app-level logging
 	log.InitSpacemeshLoggingSystem(dataDir, "spacemesh.log")
 
-	log.Info("%s", app.getAppInfo())
+	log.OnlyThat("%s", app.getAppInfo())
 }
 
 func (app *SpacemeshApp) getAppInfo() string {

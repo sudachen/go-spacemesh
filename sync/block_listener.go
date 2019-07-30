@@ -93,7 +93,7 @@ func (bl *BlockListener) HandleNewBlock(blk *types.Block, data service.GossipMes
 	for _, atx := range blk.AtxIds {
 		atxstring += atx.ShortId() + ", "
 	}
-	bl.Log.With().Info("got new block", log.BlockId(uint64(blk.Id)), log.LayerId(uint64(blk.LayerIndex)), log.EpochId(uint64(bl.currentLayer.GetEpoch(bl.layersPerEpoch))), log.Int("txs", len(blk.TxIds)), log.Int("atxs", len(blk.AtxIds)), log.String("atx_list", atxstring))
+	bl.Log.With().OnlyThat("got new block", log.BlockId(uint64(blk.Id)), log.LayerId(uint64(blk.LayerIndex)), log.EpochId(uint64(bl.currentLayer.GetEpoch(bl.layersPerEpoch))), log.Int("txs", len(blk.TxIds)), log.Int("atxs", len(blk.AtxIds)), log.String("atx_list", atxstring))
 	//check if known
 
 	if _, err := bl.GetBlock(blk.Id); err == nil {
