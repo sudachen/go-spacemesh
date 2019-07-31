@@ -500,7 +500,7 @@ func (db *ActivationDb) GetAtx(id types.AtxId) (*types.ActivationTx, error) {
 
 	t := time.Now()
 	if atx, gotIt := db.atxCache.Get(id); gotIt {
-		db.log.Info("running GetAtx (%v) took %v read from cache: %v", id, time.Since(t), true)
+		//db.log.Info("running GetAtx (%v) took %v read from cache: %v", id, time.Since(t), true)
 		return atx, nil
 	}
 	db.RLock()

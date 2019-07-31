@@ -73,16 +73,16 @@ func (bl *BlockListener) ListenToGossipBlocks() {
 				bl.Error("got empty message while listening to gossip blocks")
 				return
 			}
-			//go func() {
-			var blk types.Block
-			err := types.BytesToInterface(data.Bytes(), &blk)
-			if err != nil {
-				bl.Error("received invalid block %v", data.Bytes(), err)
-				return
-			}
+			go func() {
+				var blk types.Block
+				err := types.BytesToInterface(data.Bytes(), &blk)
+				if err != nil {
+					bl.Error("received invalid block %v", data.Bytes(), err)
+					return
+				}
 
-			bl.HandleNewBlock(&blk, data)
-			//}()
+				bl.HandleNewBlock(&blk, data)
+			}()
 		}
 	}
 }
