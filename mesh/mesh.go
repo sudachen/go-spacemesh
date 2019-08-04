@@ -46,11 +46,9 @@ type AtxMemPoolInValidator interface {
 }
 
 type AtxDB interface {
-	GetEpochAtxIds(id types.EpochId) ([]types.AtxId, error)
 	ProcessAtx(atx *types.ActivationTx)
 	GetAtx(id types.AtxId) (*types.ActivationTx, error)
 	GetNipst(id types.AtxId) (*types.NIPST, error)
-	IsIdentityActive(edId string, layer types.LayerID) (bool, types.AtxId, error)
 	SyntacticallyValidateAtx(atx *types.ActivationTx) error
 }
 

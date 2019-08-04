@@ -85,7 +85,7 @@ func (mock *ATXDBMock) GetAtx(id types.AtxId) (*types.ActivationTx, error) {
 	return mock.GetAtxFunc(id)
 }
 
-func (mock *ATXDBMock) GetEpochAtxIds(epochId types.EpochId) ([]types.AtxId, error) {
+func (mock *ATXDBMock) GetPosAtxId(types.EpochId) (types.AtxId, error) {
 	return mock.GetEpochAtxIdsFunc(epochId)
 }
 
