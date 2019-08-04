@@ -1,15 +1,15 @@
 import os
 import re
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search, Q
 
-dt = datetime.now()
+dt = datetime.now() - timedelta(days=1)
 todaydate = dt.strftime("%Y.%m.%d")
 current_index = 'kubernetes_cluster-' + todaydate
-
+print(current_index)
 
 def singleton(cls):
     instance = [None]
@@ -29,7 +29,7 @@ class ES:
         ES_PASSWD = os.getenv("ES_PASSWD")
         if not ES_PASSWD:
             raise Exception("Unknown Elasticsearch password. Please check 'ES_PASSWD' environment variable")
-        self.es = Elasticsearch("http://elastic-alpha.spacemesh.io",
+        self.es = Elasticsearch("http://elastic-gamma.spacemesh.io",
                                 http_auth=("spacemesh", ES_PASSWD), port=80, timeout=90)
 
     def get_search_api(self):

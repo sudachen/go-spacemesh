@@ -4,7 +4,7 @@ config_map_name: conf
 
 script_on_exit: '' # Uncomment this to save logs './k8s/log-client-pods.sh'
 
-genesis_delta: 80
+genesis_delta: 50
 single_pod_ready_time_out: 60
 deployment_ready_time_out: 120
 config_path: '../config.toml'
@@ -15,12 +15,12 @@ bootstrap:
   replicas: 1
   args:
     randcon: '8'
-    hare-committee-size: '15'
-    hare-max-adversaries: '3'
-    hare-round-duration-sec: '25'
-    layer-duration-sec: '180'
+    hare-committee-size: '30'
+    hare-max-adversaries: '19'
+    hare-round-duration-sec: '18'
+    layer-duration-sec: '120'
     layer-average-size: '200'
-    hare-wakeup-delta: '30'
+    hare-wakeup-delta: '20'
     layers-per-epoch: '4'
     hare-exp-leaders: '9'
     coinbase: '0x4321'
@@ -28,15 +28,15 @@ bootstrap:
 client:
   image: 'spacemeshos/go-spacemesh-dev:barak'
   command: '/bin/go-spacemesh'
-  replicas: 19
+  replicas: 74
   args:
     randcon: '8'
-    hare-committee-size: '15'
-    hare-max-adversaries: '3'
-    hare-round-duration-sec: '25'
-    layer-duration-sec: '180'
+    hare-committee-size: '30'
+    hare-max-adversaries: '19'
+    hare-round-duration-sec: '18'
+    layer-duration-sec: '120'
     layer-average-size: '200'
-    hare-wakeup-delta: '30'
+    hare-wakeup-delta: '20'
     layers-per-epoch: '4'
     hare-exp-leaders: '9'
     coinbase: '0x1234'

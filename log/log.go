@@ -9,6 +9,8 @@ import (
 	"io"
 	//"time"
 
+	//"time"
+
 	//"math/rand"
 	"os"
 	"path/filepath"
@@ -41,12 +43,12 @@ var ErrorLevel = zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
 	return lvl >= zapcore.ErrorLevel
 })
 
-var randRes = 10
+var randRes = 5
 
 func logLevel() zap.LevelEnablerFunc {
-	//if randRes == 10 {
+	//if randRes == 5 {
 	//	rand.Seed(time.Now().UnixNano())
-	//	randRes = rand.Int() % 10
+	//	randRes = rand.Int() % 5
 	//}
 	//if randRes == 0 {
 	//	return InfoLevel

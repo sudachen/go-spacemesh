@@ -164,9 +164,9 @@ func (b *Builder) loop() {
 // publish atx may not produce an atx each time it is called, that is expected behaviour as well.
 func (b *Builder) PublishActivationTx(epoch types.EpochId) (bool, error) {
 	if b.nipst != nil {
-		b.log.With().Info("re-entering atx creation", log.EpochId(uint64(epoch)))
+		b.log.With().OnlyThat("re-entering atx creation", log.EpochId(uint64(epoch)))
 	} else {
-		b.log.With().Info("starting build atx", log.EpochId(uint64(epoch)))
+		b.log.With().OnlyThat("starting build atx", log.EpochId(uint64(epoch)))
 		if b.prevATX == nil {
 			prevAtxId, err := b.GetPrevAtxId(b.nodeId)
 			if err != nil {
@@ -229,6 +229,7 @@ func (b *Builder) PublishActivationTx(epoch types.EpochId) (bool, error) {
 			return false, fmt.Errorf("cannot create nipst: %v", err)
 		}
 	}
+	//b.log.With().OnlyThat("atx again")
 	if b.mesh.LatestLayer().GetEpoch(b.layersPerEpoch) < b.challenge.PubLayerIdx.GetEpoch(b.layersPerEpoch) {
 		// cannot determine active set size before mesh reaches publication epoch, will try again in next layer
 		b.log.Warning("received PoET proof too soon. ATX publication epoch: %v; mesh epoch: %v; started in clock-epoch: %v",
@@ -238,6 +239,7 @@ func (b *Builder) PublishActivationTx(epoch types.EpochId) (bool, error) {
 	// when we reach here an epoch has passed
 	// we've completed the sequential work, now before publishing the atx,
 	// we need to provide number of atx seen in the epoch of the positioning atx.
+	//b.log.With().OnlyThat("in atx")
 	posEpoch := b.posLayerID.GetEpoch(b.layersPerEpoch)
 	activeIds, err := b.activeSet.ActiveSetSize(posEpoch)
 	if err != nil && !posEpoch.IsGenesis() {
@@ -247,10 +249,13 @@ func (b *Builder) PublishActivationTx(epoch types.EpochId) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	//b.log.With().OnlyThat("going to sleep")
+	//time.Sleep(10 * time.Second)
+	//b.log.With().OnlyThat("wake up")
 	atx := types.NewActivationTxWithChallenge(*b.challenge, b.coinbaseAccount, activeIds, view, b.nipst)
-	b.log.With().Info("start calculation active set")
+	b.log.With().OnlyThat("start calculation active set")
 	activeSetSize, err := b.db.CalcActiveSetFromView(atx) // TODO: remove this assertion to improve performance
-	b.log.With().Info("active ids seen for epoch", log.Uint64("pos_atx_epoch", uint64(posEpoch)),
+	b.log.With().OnlyThat("active ids seen for epoch", log.Uint64("pos_atx_epoch", uint64(posEpoch)),
 		log.Uint32("cache_cnt", activeIds), log.Uint32("view_cnt", activeSetSize))
 
 	if !atx.TargetEpoch(b.layersPerEpoch).IsGenesis() && activeSetSize == 0 {
@@ -278,13 +283,15 @@ func (b *Builder) PublishActivationTx(epoch types.EpochId) (bool, error) {
 	b.challenge = nil
 	b.posLayerID = 0
 
-	time.Sleep(20 * time.Second)
+	//b.log.With().OnlyThat("going to sleep")
+	time.Sleep(10 * time.Second)
+	//b.log.With().OnlyThat("wake up")
 	err = b.net.Broadcast(AtxProtocol, buf)
 	if err != nil {
 		return false, err
 	}
 
-	b.log.With().EventInfo(fmt.Sprintf("atx published! id: %v, prevATXID: %v, posATXID: %v, layer: %v, published in epoch: %v, active set: %v miner: %v view %v",
+	b.log.With().OnlyThat(fmt.Sprintf("atx published! id: %v, prevATXID: %v, posATXID: %v, layer: %v, published in epoch: %v, active set: %v miner: %v view %v",
 		atx.ShortId(), atx.PrevATXId.ShortString(), atx.PositioningAtx.ShortString(), atx.PubLayerIdx,
 		atx.PubLayerIdx.GetEpoch(b.layersPerEpoch), atx.ActiveSetSize, b.nodeId.Key[:5], len(atx.View)))
 	return true, nil
