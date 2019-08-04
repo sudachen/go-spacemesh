@@ -164,9 +164,9 @@ func (b *Builder) loop() {
 // publish atx may not produce an atx each time it is called, that is expected behaviour as well.
 func (b *Builder) PublishActivationTx(epoch types.EpochId) (bool, error) {
 	if b.nipst != nil {
-		b.log.With().OnlyThat("re-entering atx creation", log.EpochId(uint64(epoch)))
+		b.log.With().Info("re-entering atx creation", log.EpochId(uint64(epoch)))
 	} else {
-		b.log.With().OnlyThat("starting build atx", log.EpochId(uint64(epoch)))
+		b.log.With().Info("starting build atx", log.EpochId(uint64(epoch)))
 		if b.prevATX == nil {
 			prevAtxId, err := b.GetPrevAtxId(b.nodeId)
 			if err != nil {
