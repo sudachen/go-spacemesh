@@ -73,7 +73,7 @@ func (bl *BlockListener) ListenToGossipBlocks() {
 				bl.Error("got empty message while listening to gossip blocks")
 				return
 			}
-			go func() {
+			//go func() {
 				var blk types.Block
 				err := types.BytesToInterface(data.Bytes(), &blk)
 				if err != nil {
@@ -82,7 +82,7 @@ func (bl *BlockListener) ListenToGossipBlocks() {
 				}
 
 				bl.HandleNewBlock(&blk, data)
-			}()
+			//}()
 		}
 	}
 }
