@@ -48,8 +48,8 @@ type AtxDbMock struct {
 func (*AtxDbMock) IsIdentityActive(edId string, layer types.LayerID) (bool, types.AtxId, error) {
 	return true, *types.EmptyAtxId, nil
 }
-func (t *AtxDbMock) GetEpochAtxIds(id types.EpochId) ([]types.AtxId, error) {
-	return []types.AtxId{}, nil /*todo: mock if needed */
+func (t *AtxDbMock) GetPosAtxId(id types.EpochId) (types.AtxId, error) {
+	return types.AtxId{}, nil /*todo: mock if needed */
 }
 
 func (t *AtxDbMock) GetAtx(id types.AtxId) (*types.ActivationTx, error) {
