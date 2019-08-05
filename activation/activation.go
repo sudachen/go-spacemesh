@@ -5,7 +5,6 @@ import (
 	"github.com/spacemeshos/go-spacemesh/address"
 	"github.com/spacemeshos/go-spacemesh/common"
 	"github.com/spacemeshos/go-spacemesh/log"
-	"github.com/spacemeshos/go-spacemesh/rand"
 	"github.com/spacemeshos/go-spacemesh/types"
 	"sync/atomic"
 	"time"
@@ -57,8 +56,8 @@ type NipstValidator interface {
 type ATXDBProvider interface {
 	GetAtx(id types.AtxId) (*types.ActivationTx, error)
 	CalcActiveSetFromView(a *types.ActivationTx) (uint32, error)
-	GetNodeAtxIds(nodeId types.NodeId) ([]types.AtxId, error)
-	GetEpochAtxIds(epochId types.EpochId) ([]types.AtxId, error)
+	GetNodeLastAtxId(nodeId types.NodeId) (types.AtxId, error)
+	GetPosAtxId(epochId types.EpochId) (types.AtxId, error)
 }
 
 type Builder struct {
@@ -82,11 +81,6 @@ type Builder struct {
 	started         uint32
 	isSynced        func() bool
 	log             log.Log
-}
-
-type Processor struct {
-	db            *ActivationDb
-	epochProvider EpochProvider
 }
 
 // NewBuilder returns an atx builder that will start a routine that will attempt to create an atx upon each new layer.
@@ -172,7 +166,7 @@ func (b *Builder) PublishActivationTx(epoch types.EpochId) (bool, error) {
 			if err != nil {
 				b.log.Info("no prev ATX found, starting fresh")
 			} else {
-				b.prevATX, err = b.db.GetAtx(*prevAtxId)
+				b.prevATX, err = b.db.GetAtx(prevAtxId)
 				if err != nil {
 					// TODO: handle inconsistent state
 					b.log.Panic("prevAtx (id: %v) not found in DB -- inconsistent state", prevAtxId.ShortId())
@@ -229,6 +223,7 @@ func (b *Builder) PublishActivationTx(epoch types.EpochId) (bool, error) {
 			return false, fmt.Errorf("cannot create nipst: %v", err)
 		}
 	}
+	//b.log.With().OnlyThat("atx again")
 	if b.mesh.LatestLayer().GetEpoch(b.layersPerEpoch) < b.challenge.PubLayerIdx.GetEpoch(b.layersPerEpoch) {
 		// cannot determine active set size before mesh reaches publication epoch, will try again in next layer
 		b.log.Warning("received PoET proof too soon. ATX publication epoch: %v; mesh epoch: %v; started in clock-epoch: %v",
@@ -238,6 +233,7 @@ func (b *Builder) PublishActivationTx(epoch types.EpochId) (bool, error) {
 	// when we reach here an epoch has passed
 	// we've completed the sequential work, now before publishing the atx,
 	// we need to provide number of atx seen in the epoch of the positioning atx.
+	//b.log.With().OnlyThat("in atx")
 	posEpoch := b.posLayerID.GetEpoch(b.layersPerEpoch)
 	activeIds, err := b.activeSet.ActiveSetSize(posEpoch)
 	if err != nil && !posEpoch.IsGenesis() {
@@ -247,10 +243,13 @@ func (b *Builder) PublishActivationTx(epoch types.EpochId) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	//b.log.With().OnlyThat("going to sleep")
+	//time.Sleep(10 * time.Second)
+	//b.log.With().OnlyThat("wake up")
 	atx := types.NewActivationTxWithChallenge(*b.challenge, b.coinbaseAccount, activeIds, view, b.nipst)
-	b.log.With().Info("start calculation active set")
+	b.log.With().OnlyThat("start calculation active set")
 	activeSetSize, err := b.db.CalcActiveSetFromView(atx) // TODO: remove this assertion to improve performance
-	b.log.With().Info("active ids seen for epoch", log.Uint64("pos_atx_epoch", uint64(posEpoch)),
+	b.log.With().OnlyThat("active ids seen for epoch", log.Uint64("pos_atx_epoch", uint64(posEpoch)),
 		log.Uint32("cache_cnt", activeIds), log.Uint32("view_cnt", activeSetSize))
 
 	if !atx.TargetEpoch(b.layersPerEpoch).IsGenesis() && activeSetSize == 0 {
@@ -278,13 +277,15 @@ func (b *Builder) PublishActivationTx(epoch types.EpochId) (bool, error) {
 	b.challenge = nil
 	b.posLayerID = 0
 
-	time.Sleep(20 * time.Second)
+	//b.log.With().OnlyThat("going to sleep")
+	time.Sleep(10 * time.Second)
+	//b.log.With().OnlyThat("wake up")
 	err = b.net.Broadcast(AtxProtocol, buf)
 	if err != nil {
 		return false, err
 	}
 
-	b.log.With().EventInfo(fmt.Sprintf("atx published! id: %v, prevATXID: %v, posATXID: %v, layer: %v, published in epoch: %v, active set: %v miner: %v view %v",
+	b.log.With().OnlyThat(fmt.Sprintf("atx published! id: %v, prevATXID: %v, posATXID: %v, layer: %v, published in epoch: %v, active set: %v miner: %v view %v",
 		atx.ShortId(), atx.PrevATXId.ShortString(), atx.PositioningAtx.ShortString(), atx.PubLayerIdx,
 		atx.PubLayerIdx.GetEpoch(b.layersPerEpoch), atx.ActiveSetSize, b.nodeId.Key[:5], len(atx.View)))
 	return true, nil
@@ -299,28 +300,23 @@ func (b *Builder) Load() *types.NIPSTChallenge {
 	return nil
 }
 
-func (b *Builder) GetPrevAtxId(node types.NodeId) (*types.AtxId, error) {
+func (b *Builder) GetPrevAtxId(node types.NodeId) (types.AtxId, error) {
 	//todo: make sure atx ids are ordered and valid
-	ids, err := b.db.GetNodeAtxIds(node)
+	id, err := b.db.GetNodeLastAtxId(node)
 	if err != nil {
-		return nil, err
+		return *types.EmptyAtxId, err
 	}
-	if len(ids) == 0 {
-		return nil, fmt.Errorf("no prev atxs for node %v", node.Key)
-	}
-	return &ids[len(ids)-1], nil
+	return id, nil
 }
 
 // GetPositioningAtxId returns a randomly selected atx from the provided epoch epochId
 // it returns an error if epochs were not found in db
 func (b *Builder) GetPositioningAtxId(epochId types.EpochId) (*types.AtxId, error) {
 	//todo: make this on blocking until an atx is received
-	atxs, err := b.db.GetEpochAtxIds(epochId)
+	atxId, err := b.db.GetPosAtxId(epochId)
 	if err != nil {
 		return nil, err
 	}
-	atxId := atxs[rand.Int31n(int32(len(atxs)))]
-
 	return &atxId, nil
 }
 
@@ -331,9 +327,9 @@ func (b *Builder) GetLastSequence(node types.NodeId) uint64 {
 	if err != nil {
 		return 0
 	}
-	atx, err := b.db.GetAtx(*atxId)
+	atx, err := b.db.GetAtx(atxId)
 	if err != nil {
-		b.log.Error("wtf no atx in db %v", *atxId)
+		b.log.Error("wtf no atx in db %v", atxId)
 		return 0
 	}
 	return atx.Sequence
