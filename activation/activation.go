@@ -243,13 +243,13 @@ func (b *Builder) PublishActivationTx(epoch types.EpochId) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	//b.log.With().OnlyThat("going to sleep")
+	//b.log.With().Info("going to sleep")
 	//time.Sleep(10 * time.Second)
-	//b.log.With().OnlyThat("wake up")
+	//b.log.With().Info("wake up")
 	atx := types.NewActivationTxWithChallenge(*b.challenge, b.coinbaseAccount, activeIds, view, b.nipst)
-	b.log.With().OnlyThat("start calculation active set")
+	b.log.With().Info("start calculation active set")
 	activeSetSize, err := b.db.CalcActiveSetFromView(atx) // TODO: remove this assertion to improve performance
-	b.log.With().OnlyThat("active ids seen for epoch", log.Uint64("pos_atx_epoch", uint64(posEpoch)),
+	b.log.With().Info("active ids seen for epoch", log.Uint64("pos_atx_epoch", uint64(posEpoch)),
 		log.Uint32("cache_cnt", activeIds), log.Uint32("view_cnt", activeSetSize))
 
 	if !atx.TargetEpoch(b.layersPerEpoch).IsGenesis() && activeSetSize == 0 {
@@ -285,7 +285,7 @@ func (b *Builder) PublishActivationTx(epoch types.EpochId) (bool, error) {
 		return false, err
 	}
 
-	b.log.With().OnlyThat(fmt.Sprintf("atx published! id: %v, prevATXID: %v, posATXID: %v, layer: %v, published in epoch: %v, active set: %v miner: %v view %v",
+	b.log.With().Info(fmt.Sprintf("atx published! id: %v, prevATXID: %v, posATXID: %v, layer: %v, published in epoch: %v, active set: %v miner: %v view %v",
 		atx.ShortId(), atx.PrevATXId.ShortString(), atx.PositioningAtx.ShortString(), atx.PubLayerIdx,
 		atx.PubLayerIdx.GetEpoch(b.layersPerEpoch), atx.ActiveSetSize, b.nodeId.Key[:5], len(atx.View)))
 	return true, nil
