@@ -27,10 +27,6 @@ type mockActivationDB struct {
 	atxPublicationLayer types.LayerID
 }
 
-func (a mockActivationDB) ActiveSetSize(epochId types.EpochId) (uint32, error) {
-	return a.activeSetSize, nil
-}
-
 func (a mockActivationDB) GetNodeLastAtxId(node types.NodeId) (types.AtxId, error) {
 	if node.Key != nodeID.Key {
 		return *types.EmptyAtxId, errors.New("not found")
