@@ -12,7 +12,7 @@ import (
 	"math/big"
 	"sort"
 	"sync"
-	"time"
+	"sync/atomic"
 )
 
 const (
@@ -28,6 +28,7 @@ type MeshValidator interface {
 	HandleIncomingLayer(layer *types.Layer) (types.LayerID, types.LayerID)
 	HandleLateBlock(bl *types.Block)
 	ContextualValidity(id types.BlockID) bool
+	GetGoodPatternBlocks(layer types.LayerID) (map[types.BlockID]struct{}, error)
 }
 
 type TxProcessor interface {
@@ -47,9 +48,8 @@ type AtxMemPoolInValidator interface {
 
 type AtxDB interface {
 	ProcessAtx(atx *types.ActivationTx)
-	GetAtx(id types.AtxId) (*types.ActivationTx, error)
-	GetNipst(id types.AtxId) (*types.NIPST, error)
-	IsIdentityActive(edId string, layer types.LayerID) (bool, types.AtxId, error)
+	GetAtx(id types.AtxId) (*types.ActivationTxHeader, error)
+	GetFullAtx(id types.AtxId) (*types.ActivationTx, error)
 	SyntacticallyValidateAtx(atx *types.ActivationTx) error
 }
 
@@ -144,17 +144,13 @@ func SerializableSignedTransaction2StateTransaction(tx *types.AddressableSignedT
 	return NewTransaction(tx.AccountNonce, tx.Address, tx.Recipient, amount, tx.GasLimit, price)
 }
 
-func (m *Mesh) IsContexuallyValid(b types.BlockID) bool {
-	//todo implement
-	return true
-}
-
 func (m *Mesh) ValidatedLayer() types.LayerID {
 	defer m.lvMutex.RUnlock()
 	m.lvMutex.RLock()
 	return m.validatedLayer
 }
 
+// LatestLayer - returns the latest layer we saw from the network
 func (m *Mesh) LatestLayer() types.LayerID {
 	defer m.lkMutex.RUnlock()
 	m.lkMutex.RLock()
@@ -215,7 +211,7 @@ func (m *Mesh) ExtractUniqueOrderedTransactions(l *types.Layer) []*Transaction {
 
 	for _, b := range sortedBlocks {
 		if !m.tortoise.ContextualValidity(b.ID()) {
-			m.With().Info("block not Contextualy valid", log.Uint64("block_id", uint64(b.Id)), log.Uint64("layer_id", uint64(b.LayerIndex)))
+			m.Info("block %v not Contextualy valid", b)
 			continue
 		}
 
@@ -302,19 +298,11 @@ func (m *Mesh) AddBlock(blk *types.Block) error {
 }
 
 func (m *Mesh) AddBlockWithTxs(blk *types.Block, txs []*types.AddressableSignedTransaction, atxs []*types.ActivationTx) error {
-	defer m.Time(time.Now(), fmt.Sprintf("AddBlockWithTxs (%v)", blk.Id))
-	atxstring := "["
-	for _, atx := range atxs {
-		atxstring += atx.ShortId() + ", "
-	}
-	atxstring += "]"
-
-	m.Info("add block %d, unprocessed atxs %v, unprocessed txs %v", blk.ID(), atxstring, txs)
+	m.Debug("add block %d", blk.ID())
 
 	atxids := make([]types.AtxId, 0, len(atxs))
 	for _, t := range atxs {
 		//todo this should return an error
-		m.Info("about to process atx %v", t.ShortId())
 		m.AtxDB.ProcessAtx(t)
 		atxids = append(atxids, t.Id())
 	}
@@ -344,7 +332,6 @@ func (m *Mesh) AddBlockWithTxs(blk *types.Block, txs []*types.AddressableSignedT
 }
 
 func (m *Mesh) invalidateFromPools(blk *types.MiniBlock) {
-	defer m.Time(time.Now(), fmt.Sprintf("invalidateFromPools (%v)", blk.Id))
 	for _, id := range blk.TxIds {
 		m.txInvalidator.Invalidate(id)
 	}
@@ -356,7 +343,6 @@ func (m *Mesh) invalidateFromPools(blk *types.MiniBlock) {
 
 //todo better thread safety
 func (m *Mesh) handleOrphanBlocks(blk *types.BlockHeader) {
-	defer m.Time(time.Now(), fmt.Sprintf("handleOrphanBlocks (%v)", blk.Id))
 	m.orphMutex.Lock()
 	defer m.orphMutex.Unlock()
 	if _, ok := m.orphanBlocks[blk.Layer()]; !ok {
@@ -364,13 +350,13 @@ func (m *Mesh) handleOrphanBlocks(blk *types.BlockHeader) {
 	}
 	m.orphanBlocks[blk.Layer()][blk.ID()] = struct{}{}
 	m.Info("Added block %d to orphans", blk.ID())
-	//atomic.AddInt32(&m.orphanBlockCount, 1)
+	atomic.AddInt32(&m.orphanBlockCount, 1)
 	for _, b := range blk.ViewEdges {
 		for _, layermap := range m.orphanBlocks {
 			if _, has := layermap[b]; has {
 				m.Log.Debug("delete block ", b, "from orphans")
 				delete(layermap, b)
-				//atomic.AddInt32(&m.orphanBlockCount, -1)
+				atomic.AddInt32(&m.orphanBlockCount, -1)
 				break
 			}
 		}
@@ -395,6 +381,7 @@ func (m *Mesh) GetUnverifiedLayerBlocks(l types.LayerID) ([]types.BlockID, error
 
 func (m *Mesh) GetOrphanBlocksBefore(l types.LayerID) ([]types.BlockID, error) {
 	m.orphMutex.RLock()
+	defer m.orphMutex.RUnlock()
 	ids := map[types.BlockID]struct{}{}
 	for key, val := range m.orphanBlocks {
 		if key < l {
@@ -403,7 +390,6 @@ func (m *Mesh) GetOrphanBlocksBefore(l types.LayerID) ([]types.BlockID, error) {
 			}
 		}
 	}
-	m.orphMutex.RUnlock()
 
 	blocks, err := m.GetUnverifiedLayerBlocks(l - 1)
 	if err != nil {
@@ -495,15 +481,11 @@ func (m *Mesh) GetATXs(atxIds []types.AtxId) (map[types.AtxId]*types.ActivationT
 	var mIds []types.AtxId
 	atxs := make(map[types.AtxId]*types.ActivationTx, len(atxIds))
 	for _, id := range atxIds {
-		t, err := m.GetAtx(id)
+		t, err := m.GetFullAtx(id)
 		if err != nil {
 			m.Warning("could not get atx %v  from database, %v", id.ShortId(), err)
 			mIds = append(mIds, id)
 		} else {
-			if t.Nipst, err = m.GetNipst(t.Id()); err != nil {
-				m.Warning("could not get nipst %v from database, %v", id.ShortId(), err)
-				mIds = append(mIds, id)
-			}
 			atxs[t.Id()] = t
 		}
 	}
