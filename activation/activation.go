@@ -244,7 +244,7 @@ func (b *Builder) PublishActivationTx(epoch types.EpochId) (bool, error) {
 		return false, err
 	}
 	//b.log.With().Info("going to sleep")
-	//time.Sleep(10 * time.Second)
+	//time.Sleep(12 * time.Second)
 	//b.log.With().Info("wake up")
 	atx := types.NewActivationTxWithChallenge(*b.challenge, b.coinbaseAccount, activeIds, view, b.nipst)
 	b.log.With().Info("start calculation active set")
@@ -277,9 +277,9 @@ func (b *Builder) PublishActivationTx(epoch types.EpochId) (bool, error) {
 	b.challenge = nil
 	b.posLayerID = 0
 
-	//b.log.With().Info("going to sleep")
-	time.Sleep(10 * time.Second)
-	//b.log.With().Info("wake up")
+	b.log.With().Info("going to sleep")
+	time.Sleep(12 * time.Second)
+	b.log.With().Info("wake up")
 	err = b.net.Broadcast(AtxProtocol, buf)
 	if err != nil {
 		return false, err

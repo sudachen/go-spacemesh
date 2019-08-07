@@ -3,7 +3,6 @@
 package log
 
 import (
-	//"github.com/spacemeshos/go-spacemesh/rand"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
 	"io"
@@ -41,12 +40,12 @@ var ErrorLevel = zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
 	return lvl >= zapcore.ErrorLevel
 })
 
-var randRes = 10
+var randRes = 4
 
 func logLevel() zap.LevelEnablerFunc {
-	//if randRes == 10 {
+	//if randRes == 4 {
 	//	rand.Seed(time.Now().UnixNano())
-	//	randRes = rand.Int() % 10
+	//	randRes = rand.Int() % 4
 	//}
 	//if randRes == 0 {
 	//	return InfoLevel

@@ -199,7 +199,7 @@ func (s *Syncer) Synchronise() {
 
 		mu.Lock()
 		go func(lyrToValidate types.Layer) {
-			time.Sleep(time.Second*110)
+			time.Sleep(time.Second*135)
 			s.ValidateLayer(&lyrToValidate) //run one at a time
 			mu.Unlock()
 		}(*lyr)

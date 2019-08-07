@@ -97,16 +97,21 @@ func (db *ActivationDb) CalcActiveSetFromView(a *types.ActivationTx) (uint32, er
 	firstLayerOfLastEpoch := types.LayerID(countingEpoch) * types.LayerID(db.LayersPerEpoch)
 
 	traversalFunc := func(blk *types.Block) error {
+		db.log.Info("in traversal")
 		//skip blocks not from atx epoch
 		if blk.LayerIndex.GetEpoch(db.LayersPerEpoch) != countingEpoch {
 			return nil
 		}
+		db.log.Info("traversal started")
 		for _, id := range blk.AtxIds {
 			if _, found := set[id]; found {
 				continue
 			}
+			db.log.Info("new block")
 			set[id] = struct{}{}
+			db.log.Info("entering get-atx: %v", id.ShortId())
 			atx, err := db.GetAtx(id)
+			db.log.Info("out of get-atx: %v", id.ShortId())
 			if err != nil {
 				log.Panic("error fetching atx %v from database -- inconsistent state", id.ShortId()) // TODO: handle inconsistent state
 				return fmt.Errorf("error fetching atx %v from database -- inconsistent state", id.ShortId())
@@ -127,13 +132,15 @@ func (db *ActivationDb) CalcActiveSetFromView(a *types.ActivationTx) (uint32, er
 	for _, blk := range a.View {
 		mp[blk] = struct{}{}
 	}
-
+	db.log.Info("entering ForBlockInView")
 	err = db.meshDb.ForBlockInView(mp, firstLayerOfLastEpoch, traversalFunc)
+	db.log.Info("done ForBlockInView")
 	if err != nil {
 		return 0, err
 	}
-
+	db.log.Info("adding to cache")
 	activesetCache.Add(common.BytesToHash(viewBytes), counter)
+	db.log.Info("done adding to cache")
 
 	return counter, nil
 
@@ -468,12 +475,14 @@ func (db *ActivationDb) GetAtx(id types.AtxId) (*types.ActivationTx, error) {
 
 	t := time.Now()
 	if atx, gotIt := db.atxCache.Get(id); gotIt {
-		//db.log.Info("running GetAtx (%v) took %v read from cache: %v", id, time.Since(t), true)
+		db.log.Info("running GetAtx (%v) took %v read from cache: %v", id, time.Since(t), true)
 		return atx, nil
 	}
+	db.log.Info("get atx lock: %v", id)
 	db.RLock()
 	b, err := db.atxs.Get(id.Bytes())
 	db.RUnlock()
+	db.log.Info("get atx unlock: %v", id)
 	if err != nil {
 		return nil, err
 	}
