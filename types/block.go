@@ -2,6 +2,8 @@ package types
 
 import (
 	"bytes"
+	"encoding/binary"
+	"github.com/google/uuid"
 	"github.com/spacemeshos/go-spacemesh/address"
 	"github.com/spacemeshos/go-spacemesh/common"
 	"github.com/spacemeshos/go-spacemesh/log"
@@ -47,7 +49,6 @@ func (id NodeId) ShortString() string {
 type BlockHeader struct {
 	Id               BlockID
 	LayerIndex       LayerID
-	MinerID          NodeId // TODO: remove. The block has the ed id in the signature and should be able to fetch the bls id from the miner's ATXs
 	ATXID            AtxId
 	EligibilityProof BlockEligibilityProof
 	Data             []byte
@@ -157,11 +158,10 @@ func NewAddressableTx(nonce uint64, orig, rec address.Address, amount, gasLimit,
 	}
 }
 
-func newBlockHeader(id BlockID, layerID LayerID, minerID NodeId, coin bool, data []byte, ts int64, viewEdges []BlockID, blockVotes []BlockID) *BlockHeader {
+func newBlockHeader(id BlockID, layerID LayerID, coin bool, data []byte, ts int64, viewEdges []BlockID, blockVotes []BlockID) *BlockHeader {
 	b := &BlockHeader{
 		Id:         id,
 		LayerIndex: layerID,
-		MinerID:    minerID,
 		BlockVotes: blockVotes,
 		ViewEdges:  viewEdges,
 		Timestamp:  ts,
@@ -248,6 +248,11 @@ func NewExistingBlock(id BlockID, layerIndex LayerID, data []byte) *Block {
 				Data:       data},
 		}}
 	return &b
+}
+
+func RandBlockId() BlockID {
+	id := uuid.New()
+	return BlockID(binary.BigEndian.Uint64(id[:8]))
 }
 
 func NewLayer(layerIndex LayerID) *Layer {

@@ -164,6 +164,12 @@ func (l Log) WithFields(fields ...Field) Log {
 	}
 }
 
+const event_key = "event"
+
+func (l Log) Event() fieldLogger {
+	return fieldLogger{l: l.logger.With(unpack(Bool(event_key, true))...)}
+}
+
 func EnableLevelOption(enabler zapcore.LevelEnabler) zap.Option {
 	return zap.WrapCore(func(core zapcore.Core) zapcore.Core {
 		consoleSyncer := zapcore.AddSync(os.Stdout)

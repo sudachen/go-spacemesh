@@ -84,10 +84,13 @@ def setup_bootstrap_in_namespace(namespace, bs_deployment_info, bootstrap_config
         time.sleep(1)
 
     bs_pod['pod_ip'] = resp.status.pod_ip
-    bootstrap_pod_logs = client.CoreV1Api().read_namespaced_pod_log(name=bs_pod['name'],
-                                                                    namespace=namespace,
-                                                                    container='bootstrap')
-    match = re.search(r"Local node identity >> (?P<bootstrap_key>\w+)", bootstrap_pod_logs)
+
+    match = pod.search_phrase_in_pod_log(bs_pod['name'], namespace, 'bootstrap',
+                                         r"Local node identity >> (?P<bootstrap_key>\w+)")
+
+    if not match:
+        raise Exception("Failed to read container logs in {0}".format('bootstrap'))
+
     bs_pod['key'] = match.group('bootstrap_key')
     bs_deployment_info.pods = [bs_pod]
     return bs_deployment_info
@@ -436,13 +439,14 @@ def test_mining(setup_network):
     layer_avg_size = testconfig['client']['args']['layer-average-size']
     layers_per_epoch = int(testconfig['client']['args']['layers-per-epoch'])
     # check only third epoch
-    epochs = 3
+    epochs = 5
     last_layer = epochs*layers_per_epoch
 
     queries.wait_for_latest_layer(testconfig["namespace"], last_layer)
     print("test took {:.3f} seconds ".format(end - start))
 
     total_pods = len(setup_network.clients.pods) + len(setup_network.bootstrap.pods)
+    time.sleep(50)
     analyse.analyze_mining(testconfig['namespace'], last_layer, layers_per_epoch, layer_avg_size, total_pods)
 
     validate_hare(current_index, ns)  # validate hare

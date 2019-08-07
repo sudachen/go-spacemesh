@@ -97,8 +97,8 @@ func (mip *mockIdProvider) GetIdentity(edId string) (types.NodeId, error) {
 type mockStateQuerier struct {
 }
 
-func (msq mockStateQuerier) IsIdentityActive(edId string, layer types.LayerID) (bool, types.AtxId, error) {
-	return true, *types.EmptyAtxId, nil
+func (msq mockStateQuerier) IsIdentityActiveOnConsensusView(edId string, layer types.LayerID) (bool, error) {
+	return true, nil
 }
 
 func validateBlocks(blocks []types.BlockID) bool {
@@ -164,7 +164,7 @@ func (app *HareApp) Start(cmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Panic("error starting p2p err=%v", err)
 	}
-	app.clock.Start()
+	app.clock.StartNotifying()
 }
 
 func main() {

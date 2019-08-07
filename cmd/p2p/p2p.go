@@ -15,7 +15,6 @@ var Cmd = &cobra.Command{
 	Use:   "p2p",
 	Short: "start p2p",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Starting p2p")
 		p2pApp := NewP2PApp()
 		defer p2pApp.Cleanup()
 
@@ -44,6 +43,7 @@ func (app *P2PApp) Cleanup() {
 func (app *P2PApp) Start(cmd *cobra.Command, args []string) {
 	// init p2p services
 	log.JSONLog(true)
+	log.DebugMode(true)
 	log.Info("Initializing P2P services")
 	swarm, err := p2p.New(cmdp.Ctx, app.Config.P2P)
 	if err != nil {
