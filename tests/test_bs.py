@@ -19,7 +19,8 @@ from tests.misc import ContainerSpec, CoreV1ApiClient
 from tests.queries import ES
 from tests.hare.assert_hare import validate_hare
 
-BOOT_DEPLOYMENT_FILE = './k8s/bootstrapoet-w-conf.yml'
+BOOT_DEPLOYMENT_FILE = './k8s/newpoet-w-conf.yml'
+#BOOT_DEPLOYMENT_FILE = './k8s/bootstrapoet-w-conf.yml'
 CLIENT_DEPLOYMENT_FILE = './k8s/client-w-conf.yml'
 CLIENT_POD_FILE = './k8s/single-client-w-conf.yml'
 CURL_POD_FILE = './k8s/curl.yml'
@@ -130,8 +131,9 @@ def setup_server(deployment_name, deployment_file, namespace):
     return ip
 
 
+
 @pytest.fixture(scope='module')
-def setup_bootstrap(request, init_session):
+def setup_bootstrap(request, init_session, create_configmap):
     bootstrap_deployment_info = DeploymentInfo(dep_id=init_session)
 
     return setup_bootstrap_in_namespace(testconfig['namespace'],
@@ -144,7 +146,7 @@ def node_string(key, ip, port, discport):
     return "spacemesh://{0}@{1}:{2}?disc={3}".format(key, ip, port, discport)
 
 
-def get_conf(bs_info, client_config, setup_oracle=None, setup_poet=None, args=None):
+def get_conf(bs_info, client_config, setup_oracle=None, setup_poet=None, args=None, poet_port=None):
 
     client_args = {} if 'args' not in client_config else client_config['args']
 
@@ -158,7 +160,9 @@ def get_conf(bs_info, client_config, setup_oracle=None, setup_poet=None, args=No
         client_args['oracle_server'] = 'http://{0}:{1}'.format(setup_oracle, ORACLE_SERVER_PORT)
 
     if setup_poet:
-        client_args['poet_server'] = '{0}:{1}'.format(setup_poet, POET_SERVER_PORT)
+        if poet_port is None:
+            poet_port = POET_SERVER_PORT
+        client_args['poet_server'] = '{0}:{1}'.format(setup_poet, poet_port)
 
     cspec.append_args(bootnodes=node_string(bs_info['key'], bs_info['pod_ip'], BOOTSTRAP_PORT, BOOTSTRAP_PORT),
                       genesis_time=GENESIS_TIME.isoformat('T', 'seconds'))
@@ -175,7 +179,7 @@ def setup_clients_in_namespace(namespace, bs_deployment_info, client_deployment_
 
     resp = deployment.create_deployment(CLIENT_DEPLOYMENT_FILE, namespace,
                                         deployment_id=client_deployment_info.deployment_id,
-                                        replica_size=client_config['replicas'],
+                                        replica_size=int(client_config['replicas']/2),
                                         container_specs=cspec,
                                         time_out=dep_time_out)
 
@@ -187,6 +191,24 @@ def setup_clients_in_namespace(namespace, bs_deployment_info, client_deployment_
                                                   client_deployment_info.deployment_name.split('-')[1]))).items)
 
     client_deployment_info.pods = [{'name': c.metadata.name, 'pod_ip': c.status.pod_ip} for c in client_pods]
+
+    cspec2 = get_conf(bs_deployment_info, client_config, oracle, poet, poet_port=50003)
+
+    resp = deployment.create_deployment(CLIENT_DEPLOYMENT_FILE, namespace,
+                                        deployment_id=client_deployment_info.deployment_id,
+                                        replica_size=int(client_config['replicas']/2)+1,
+                                        container_specs=cspec2,
+                                        time_out=dep_time_out)
+
+    client_deployment_info.deployment_name = resp.metadata._name
+    client_pods = (
+        CoreV1ApiClient().list_namespaced_pod(namespace,
+                                              include_uninitialized=True,
+                                              label_selector=("name={0}".format(
+                                                  client_deployment_info.deployment_name.split('-')[1]))).items)
+
+    client_deployment_info.pods.extend([{'name': c.metadata.name, 'pod_ip': c.status.pod_ip} for c in client_pods])
+
     return client_deployment_info
 
 
@@ -279,7 +301,7 @@ def api_call(client_ip, data, api, namespace):
                  stderr=True, stdin=False, stdout=True, tty=False, _request_timeout=90)
     return res
 
-# The following fixture is currently not in used and mark for deprecattion
+
 @pytest.fixture(scope='module')
 def create_configmap(request):
     def _create_configmap_in_namespace(nspace):
@@ -365,7 +387,7 @@ def test_transaction(setup_network):
     print("submitting transaction")
     out = api_call(client_ip, data, api, testconfig['namespace'])
     print(out)
-    assert "{'value': 'ok'" in out
+    assert "{'value': 'ok'}" in out
     print("submit transaction ok")
     print("wait for confirmation ")
     api = 'v1/balance'
@@ -407,7 +429,7 @@ def test_mining(setup_network):
     print("submitting transaction")
     out = api_call(client_ip, data, api, testconfig['namespace'])
     print(out)
-    assert "{'value': 'ok'" in out
+    assert "{'value': 'ok'}" in out
     print("submit transaction ok")
     print("wait for confirmation ")
     api = 'v1/balance'
