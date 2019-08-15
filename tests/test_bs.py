@@ -19,7 +19,7 @@ from tests.misc import ContainerSpec, CoreV1ApiClient
 from tests.queries import ES
 from tests.hare.assert_hare import validate_hare
 
-BOOT_DEPLOYMENT_FILE = './k8s/newpoet-w-conf.yml'
+BOOT_DEPLOYMENT_FILE = './k8s/bootstrapoet-w-conf.yml'
 #BOOT_DEPLOYMENT_FILE = './k8s/bootstrapoet-w-conf.yml'
 CLIENT_DEPLOYMENT_FILE = './k8s/client-w-conf.yml'
 CLIENT_POD_FILE = './k8s/single-client-w-conf.yml'
@@ -131,9 +131,8 @@ def setup_server(deployment_name, deployment_file, namespace):
     return ip
 
 
-
 @pytest.fixture(scope='module')
-def setup_bootstrap(request, init_session, create_configmap):
+def setup_bootstrap(request, init_session):
     bootstrap_deployment_info = DeploymentInfo(dep_id=init_session)
 
     return setup_bootstrap_in_namespace(testconfig['namespace'],
@@ -146,7 +145,7 @@ def node_string(key, ip, port, discport):
     return "spacemesh://{0}@{1}:{2}?disc={3}".format(key, ip, port, discport)
 
 
-def get_conf(bs_info, client_config, setup_oracle=None, setup_poet=None, args=None, poet_port=None):
+def get_conf(bs_info, client_config, setup_oracle=None, setup_poet=None, args=None):
 
     client_args = {} if 'args' not in client_config else client_config['args']
 
@@ -160,9 +159,7 @@ def get_conf(bs_info, client_config, setup_oracle=None, setup_poet=None, args=No
         client_args['oracle_server'] = 'http://{0}:{1}'.format(setup_oracle, ORACLE_SERVER_PORT)
 
     if setup_poet:
-        if poet_port is None:
-            poet_port = POET_SERVER_PORT
-        client_args['poet_server'] = '{0}:{1}'.format(setup_poet, poet_port)
+        client_args['poet_server'] = '{0}:{1}'.format(setup_poet, POET_SERVER_PORT)
 
     cspec.append_args(bootnodes=node_string(bs_info['key'], bs_info['pod_ip'], BOOTSTRAP_PORT, BOOTSTRAP_PORT),
                       genesis_time=GENESIS_TIME.isoformat('T', 'seconds'))
@@ -301,7 +298,7 @@ def api_call(client_ip, data, api, namespace):
                  stderr=True, stdin=False, stdout=True, tty=False, _request_timeout=90)
     return res
 
-
+# The following fixture is currently not in used and mark for deprecattion
 @pytest.fixture(scope='module')
 def create_configmap(request):
     def _create_configmap_in_namespace(nspace):
@@ -387,7 +384,7 @@ def test_transaction(setup_network):
     print("submitting transaction")
     out = api_call(client_ip, data, api, testconfig['namespace'])
     print(out)
-    assert "{'value': 'ok'}" in out
+    assert "{'value': 'ok'" in out
     print("submit transaction ok")
     print("wait for confirmation ")
     api = 'v1/balance'
@@ -429,7 +426,7 @@ def test_mining(setup_network):
     print("submitting transaction")
     out = api_call(client_ip, data, api, testconfig['namespace'])
     print(out)
-    assert "{'value': 'ok'}" in out
+    assert "{'value': 'ok'" in out
     print("submit transaction ok")
     print("wait for confirmation ")
     api = 'v1/balance'
