@@ -4,47 +4,47 @@ config_map_name: conf
 
 script_on_exit: '' # Uncomment this to save logs './k8s/log-client-pods.sh'
 
-genesis_delta: 31
+genesis_delta: 45
 single_pod_ready_time_out: 60
 deployment_ready_time_out: 120
 config_path: '../config.toml'
 
 bootstrap:
-  image: 'spacemeshos/go-spacemesh-dev:barak2'
+  image: 'spacemeshos/go-spacemesh-dev:barak'
   command: '/bin/go-spacemesh'
   replicas: 1
   args:
     randcon: '8'
-    hare-committee-size: '75'
-    hare-max-adversaries: '30'
+    hare-committee-size: '150'
+    hare-max-adversaries: '70'
     hare-round-duration-sec: '25'
     layer-duration-sec: '150'
-    layer-average-size: '100'
+    layer-average-size: '200'
     hare-wakeup-delta: '25'
     layers-per-epoch: '5'
-    hare-exp-leaders: '9'
+    hare-exp-leaders: '6'
     coinbase: '0x4321'
     eligibility-confidence-param: '4'
     eligibility-epoch-offset: '0'
-    genesis-active-size: '100'
+    genesis-active-size: '250'
 client:
-  image: 'spacemeshos/go-spacemesh-dev:barak2'
+  image: 'spacemeshos/go-spacemesh-dev:barak'
   command: '/bin/go-spacemesh'
-  replicas: 99
+  replicas: 249
   args:
     randcon: '8'
-    hare-committee-size: '75'
-    hare-max-adversaries: '30'
+    hare-committee-size: '150'
+    hare-max-adversaries: '70'
     hare-round-duration-sec: '25'
     layer-duration-sec: '150'
-    layer-average-size: '100'
+    layer-average-size: '200'
     hare-wakeup-delta: '25'
     layers-per-epoch: '5'
-    hare-exp-leaders: '9'
+    hare-exp-leaders: '6'
     coinbase: '0x1234'
     eligibility-confidence-param: '4'
     eligibility-epoch-offset: '0'
-    genesis-active-size: '100'
+    genesis-active-size: '250'
 elastic:
   host: elastic.spacemesh.io
   port: 9200
