@@ -19,7 +19,7 @@ from tests.misc import ContainerSpec, CoreV1ApiClient
 from tests.queries import ES
 from tests.hare.assert_hare import validate_hare
 
-BOOT_DEPLOYMENT_FILE = './k8s/newpoet-w-conf.yml'
+BOOT_DEPLOYMENT_FILE = './k8s/bootstrapoet-w-conf.yml'
 #BOOT_DEPLOYMENT_FILE = './k8s/bootstrapoet-w-conf.yml'
 CLIENT_DEPLOYMENT_FILE = './k8s/client-w-conf.yml'
 CLIENT_POD_FILE = './k8s/single-client-w-conf.yml'
@@ -384,7 +384,7 @@ def test_transaction(setup_network):
     print("submitting transaction")
     out = api_call(client_ip, data, api, testconfig['namespace'])
     print(out)
-    assert "{'value': 'ok'}" in out
+    assert "{'value': 'ok'" in out
     print("submit transaction ok")
     print("wait for confirmation ")
     api = 'v1/balance'
@@ -426,7 +426,7 @@ def test_mining(setup_network):
     print("submitting transaction")
     out = api_call(client_ip, data, api, testconfig['namespace'])
     print(out)
-    assert "{'value': 'ok'}" in out
+    assert "{'value': 'ok'" in out
     print("submit transaction ok")
     print("wait for confirmation ")
     api = 'v1/balance'
