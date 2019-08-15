@@ -208,6 +208,7 @@ func (s *Syncer) Synchronise() {
 			s.With().Error("failed getting layer even though IsSynced is true", log.Err(err))
 			return
 		}
+		time.Sleep(time.Second*135)
 		s.lValidator.ValidateLayer(lyr) // wait for layer validation
 		return
 	}
