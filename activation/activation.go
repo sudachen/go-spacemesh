@@ -365,7 +365,7 @@ func (b *Builder) PublishActivationTx(epoch types.EpochId) error {
 		return tooSoonErr
 	}
 
-	time.Sleep(time.Second*6)
+	time.Sleep(time.Second*10)
 	// when we reach here an epoch has passed
 	// we've completed the sequential work, now before publishing the atx,
 	// we need to provide number of atx seen in the epoch of the positioning atx.
