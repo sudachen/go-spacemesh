@@ -301,7 +301,7 @@ def api_call(client_ip, data, api, namespace):
                  stderr=True, stdin=False, stdout=True, tty=False, _request_timeout=90)
     return res
 
-
+# The following fixture is currently not in used and mark for deprecattion
 @pytest.fixture(scope='module')
 def create_configmap(request):
     def _create_configmap_in_namespace(nspace):
@@ -387,7 +387,7 @@ def test_transaction(setup_network):
     print("submitting transaction")
     out = api_call(client_ip, data, api, testconfig['namespace'])
     print(out)
-    assert "{'value': 'ok'}" in out
+    assert "{'value': 'ok'" in out
     print("submit transaction ok")
     print("wait for confirmation ")
     api = 'v1/balance'

@@ -19,8 +19,7 @@ from tests.misc import ContainerSpec, CoreV1ApiClient
 from tests.queries import ES
 from tests.hare.assert_hare import validate_hare
 
-BOOT_DEPLOYMENT_FILE = './k8s/newpoet-w-conf.yml'
-#BOOT_DEPLOYMENT_FILE = './k8s/bootstrapoet-w-conf.yml'
+BOOT_DEPLOYMENT_FILE = './k8s/bootstrapoet-w-conf.yml'
 CLIENT_DEPLOYMENT_FILE = './k8s/client-w-conf.yml'
 CLIENT_POD_FILE = './k8s/single-client-w-conf.yml'
 CURL_POD_FILE = './k8s/curl.yml'
@@ -176,7 +175,7 @@ def setup_clients_in_namespace(namespace, bs_deployment_info, client_deployment_
 
     resp = deployment.create_deployment(CLIENT_DEPLOYMENT_FILE, namespace,
                                         deployment_id=client_deployment_info.deployment_id,
-                                        replica_size=int(client_config['replicas']/2),
+                                        replica_size=client_config['replicas'],
                                         container_specs=cspec,
                                         time_out=dep_time_out)
 
@@ -188,24 +187,6 @@ def setup_clients_in_namespace(namespace, bs_deployment_info, client_deployment_
                                                   client_deployment_info.deployment_name.split('-')[1]))).items)
 
     client_deployment_info.pods = [{'name': c.metadata.name, 'pod_ip': c.status.pod_ip} for c in client_pods]
-
-    cspec2 = get_conf(bs_deployment_info, client_config, oracle, poet, poet_port=50003)
-
-    resp = deployment.create_deployment(CLIENT_DEPLOYMENT_FILE, namespace,
-                                        deployment_id=client_deployment_info.deployment_id,
-                                        replica_size=int(client_config['replicas']/2)+1,
-                                        container_specs=cspec2,
-                                        time_out=dep_time_out)
-
-    client_deployment_info.deployment_name = resp.metadata._name
-    client_pods = (
-        CoreV1ApiClient().list_namespaced_pod(namespace,
-                                              include_uninitialized=True,
-                                              label_selector=("name={0}".format(
-                                                  client_deployment_info.deployment_name.split('-')[1]))).items)
-
-    client_deployment_info.pods.extend([{'name': c.metadata.name, 'pod_ip': c.status.pod_ip} for c in client_pods])
-
     return client_deployment_info
 
 
@@ -384,7 +365,7 @@ def test_transaction(setup_network):
     print("submitting transaction")
     out = api_call(client_ip, data, api, testconfig['namespace'])
     print(out)
-    assert "{'value': 'ok'}" in out
+    assert "{'value': 'ok'" in out
     print("submit transaction ok")
     print("wait for confirmation ")
     api = 'v1/balance'
@@ -426,7 +407,7 @@ def test_mining(setup_network):
     print("submitting transaction")
     out = api_call(client_ip, data, api, testconfig['namespace'])
     print(out)
-    assert "{'value': 'ok'}" in out
+    assert "{'value': 'ok'" in out
     print("submit transaction ok")
     print("wait for confirmation ")
     api = 'v1/balance'
