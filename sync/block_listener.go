@@ -1,7 +1,6 @@
 package sync
 
 import (
-	"fmt"
 	"github.com/spacemeshos/go-spacemesh/config"
 	"github.com/spacemeshos/go-spacemesh/log"
 	"github.com/spacemeshos/go-spacemesh/p2p/server"
@@ -87,9 +86,9 @@ func (bl *BlockListener) ListenToGossipBlocks() {
 }
 
 func (bl *BlockListener) HandleNewBlock(blk *types.Block, data service.GossipMessage) bool {
-	bl.Log.With().Info("got new block", log.BlockId(uint64(blk.Id)), log.LayerId(uint64(blk.LayerIndex)), log.EpochId(uint64(bl.currentLayer.GetEpoch(bl.layersPerEpoch))), log.Int("txs", len(blk.TxIds)), log.Int("atxs", len(blk.AtxIds)), log.String("atx_list", atxstring))
-	//check if known
 
+	bl.Log.With().Info("got new block", log.BlockId(uint64(blk.Id)), log.LayerId(uint64(blk.LayerIndex)), log.Int("txs", len(blk.TxIds)), log.Int("atxs", len(blk.AtxIds)))
+	//check if known
 	if _, err := bl.GetBlock(blk.Id); err == nil {
 		bl.With().Info("we already know this block", log.BlockId(uint64(blk.ID())))
 		return true
@@ -107,16 +106,14 @@ func (bl *BlockListener) HandleNewBlock(blk *types.Block, data service.GossipMes
 	if data != nil {
 		data.ReportValidation(config.NewBlockProtocol)
 	}
-	//go func() { // moving to blocking call since HandleNewBlock now runs in a go routine
+	go func() { // moving to blocking call since HandleNewBlock now runs in a go routine
 	if err := bl.AddBlockWithTxs(blk, txs, atxs); err != nil {
 		bl.Log.With().Error("failed to add block to database", log.BlockId(uint64(blk.ID())), log.Err(err))
 		//return
 	} else {
 		bl.With().Info("added block to database", log.BlockId(uint64(blk.ID())))
 	}
-	//}()
+	}()
 	return true
 }
-
-
 
