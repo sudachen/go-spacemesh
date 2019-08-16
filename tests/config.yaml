@@ -4,7 +4,7 @@ config_map_name: conf
 
 script_on_exit: '' # Uncomment this to save logs './k8s/log-client-pods.sh'
 
-genesis_delta: 45
+genesis_delta: 31
 single_pod_ready_time_out: 60
 deployment_ready_time_out: 120
 config_path: '../config.toml'
@@ -15,8 +15,8 @@ bootstrap:
   replicas: 1
   args:
     randcon: '8'
-    hare-committee-size: '140'
-    hare-max-adversaries: '70'
+    hare-committee-size: '100'
+    hare-max-adversaries: '50'
     hare-round-duration-sec: '30'
     layer-duration-sec: '180'
     layer-average-size: '200'
@@ -26,15 +26,15 @@ bootstrap:
     coinbase: '0x4321'
     eligibility-confidence-param: '8'
     eligibility-epoch-offset: '0'
-    genesis-active-size: '250'
+    genesis-active-size: '200'
 client:
   image: 'spacemeshos/go-spacemesh-dev:barak2'
   command: '/bin/go-spacemesh'
-  replicas: 249
+  replicas: 199
   args:
     randcon: '8'
-    hare-committee-size: '170'
-    hare-max-adversaries: '60'
+    hare-committee-size: '100'
+    hare-max-adversaries: '50'
     hare-round-duration-sec: '30'
     layer-duration-sec: '180'
     layer-average-size: '200'
@@ -44,7 +44,7 @@ client:
     coinbase: '0x1234'
     eligibility-confidence-param: '8'
     eligibility-epoch-offset: '0'
-    genesis-active-size: '250'
+    genesis-active-size: '200'
 elastic:
   host: elastic.spacemesh.io
   port: 9200
