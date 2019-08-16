@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"fmt"
 	"github.com/spacemeshos/go-spacemesh/config"
 	"github.com/spacemeshos/go-spacemesh/log"
 	"github.com/spacemeshos/go-spacemesh/p2p/server"
@@ -67,37 +68,34 @@ func (bl *BlockListener) ListenToGossipBlocks() {
 				bl.With().Info("ignoring gossip blocks - not synced yet")
 				break
 			}
-			bl.wg.Add(1)
-			go func() {
-				if data == nil {
-					bl.Error("got empty message while listening to gossip blocks")
-					return
-				}
-				var blk types.Block
-				err := types.BytesToInterface(data.Bytes(), &blk)
-				if err != nil {
-					bl.Error("received invalid block %v", data.Bytes(), err)
-					return
-				}
+			if data == nil {
+				bl.Error("got empty message while listening to gossip blocks")
+				return
+			}
+			//go func() {
+			var blk types.Block
+			err := types.BytesToInterface(data.Bytes(), &blk)
+			if err != nil {
+				bl.Error("received invalid block %v", data.Bytes(), err)
+				return
+			}
 
-				if bl.HandleNewBlock(&blk) {
-					data.ReportValidation(config.NewBlockProtocol)
-				}
-				bl.wg.Done()
-			}()
-
+			bl.HandleNewBlock(&blk, data)
+			//}()
 		}
 	}
 }
 
-func (bl *BlockListener) HandleNewBlock(blk *types.Block) bool {
-
-	bl.Log.With().Info("got new block", log.BlockId(uint64(blk.Id)), log.LayerId(uint64(blk.LayerIndex)), log.Int("txs", len(blk.TxIds)), log.Int("atxs", len(blk.AtxIds)))
+func (bl *BlockListener) HandleNewBlock(blk *types.Block, data service.GossipMessage) bool {
+	bl.Log.With().Info("got new block", log.BlockId(uint64(blk.Id)), log.LayerId(uint64(blk.LayerIndex)), log.EpochId(uint64(bl.currentLayer.GetEpoch(bl.layersPerEpoch))), log.Int("txs", len(blk.TxIds)), log.Int("atxs", len(blk.AtxIds)), log.String("atx_list", atxstring))
 	//check if known
+
 	if _, err := bl.GetBlock(blk.Id); err == nil {
 		bl.With().Info("we already know this block", log.BlockId(uint64(blk.ID())))
 		return true
 	}
+
+	bl.Log.With().Info("finished database check. running syntactic validation ", log.BlockId(uint64(blk.ID())))
 
 	txs, atxs, err := bl.BlockSyntacticValidation(blk)
 	if err != nil {
@@ -105,11 +103,20 @@ func (bl *BlockListener) HandleNewBlock(blk *types.Block) bool {
 		return false
 	}
 
-	if err := bl.AddBlockWithTxs(blk, txs, atxs); err != nil {
-		bl.With().Error("failed to add block to database", log.BlockId(uint64(blk.ID())), log.Err(err))
-		return false
+	bl.Log.With().Info("finished syntactic validation propagating and adding block with txs", log.BlockId(uint64(blk.ID())))
+	if data != nil {
+		data.ReportValidation(config.NewBlockProtocol)
 	}
-
-	bl.With().Info("added block to database", log.BlockId(uint64(blk.ID())))
+	//go func() { // moving to blocking call since HandleNewBlock now runs in a go routine
+	if err := bl.AddBlockWithTxs(blk, txs, atxs); err != nil {
+		bl.Log.With().Error("failed to add block to database", log.BlockId(uint64(blk.ID())), log.Err(err))
+		//return
+	} else {
+		bl.With().Info("added block to database", log.BlockId(uint64(blk.ID())))
+	}
+	//}()
 	return true
 }
+
+
+
