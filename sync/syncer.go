@@ -471,7 +471,7 @@ func (s *Syncer) syncAtxs(atxIds []types.AtxId) ([]*types.ActivationTx, error) {
 			s.Debug("found atx, %v in atx pool", id.ShortId())
 			unprocessedAtxs[id] = &atx
 		} else {
-			s.Warning("atx %v not in atx pool", id.ShortId())
+			//s.Warning("atx %v not in atx pool", id.ShortId())
 			missingInPool = append(missingInPool, id)
 		}
 	}
