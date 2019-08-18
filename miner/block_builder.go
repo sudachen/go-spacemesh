@@ -286,7 +286,8 @@ func (t *BlockBuilder) listenForAtx() {
 				// not accepting atxs when not synced
 				continue
 			}
-			go t.handleGossipAtx(data)
+			//go t.handleGossipAtx(data)
+			t.handleGossipAtx(data)
 		}
 	}
 }

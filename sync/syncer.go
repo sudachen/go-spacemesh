@@ -208,6 +208,7 @@ func (s *Syncer) Synchronise() {
 			s.With().Error("failed getting layer even though IsSynced is true", log.Err(err))
 			return
 		}
+		time.Sleep(time.Second*170)
 		s.lValidator.ValidateLayer(lyr) // wait for layer validation
 		return
 	}
@@ -470,7 +471,7 @@ func (s *Syncer) syncAtxs(atxIds []types.AtxId) ([]*types.ActivationTx, error) {
 			s.Debug("found atx, %v in atx pool", id.ShortId())
 			unprocessedAtxs[id] = &atx
 		} else {
-			s.Warning("atx %v not in atx pool", id.ShortId())
+			//s.Warning("atx %v not in atx pool", id.ShortId())
 			missingInPool = append(missingInPool, id)
 		}
 	}

@@ -22,7 +22,7 @@ spec:
           resources:
             requests:
               memory: "512M"
-              cpu: "1.5"
+              cpu: "2"
             limits:
               memory: "2048M"
               cpu: "2"
@@ -42,5 +42,19 @@ spec:
               cpu: "2"
           ports:
             - containerPort: 50002
+        - name: poet2
+          image: spacemeshos/poet:develop
+          imagePullPolicy: Always
+          args: ['--rpclisten', '0.0.0.0:50003', '--restlisten', '0.0.0.0:80', '--nodeaddr', '127.0.0.1:9091', "--n", "23", "--core.n", "23"]
+          resources:
+            requests:
+              memory: "512M"
+              cpu: "1"
+            limits:
+              memory: "2048M"
+              cpu: "2"
+          ports:
+            - containerPort: 50003
       nodeSelector:
         role: tests
+
