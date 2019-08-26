@@ -94,24 +94,24 @@ func (bl *BlockListener) ListenToGossipBlocks() {
 
 func (bl *BlockListener) HandleNewBlock(blk *types.Block) bool {
 
-	bl.Log.With().Info("got new block", log.BlockId(uint64(blk.Id)), log.Int("txs", len(blk.TxIds)), log.Int("atxs", len(blk.AtxIds)))
+	bl.Log.With().Info("got new block", log.BlockId(blk.Id.Uint64()), log.Int("txs", len(blk.TxIds)), log.Int("atxs", len(blk.AtxIds)))
 	//check if known
 	if _, err := bl.GetBlock(blk.Id); err == nil {
-		bl.With().Info("we already know this block", log.BlockId(uint64(blk.ID())))
+		bl.With().Info("we already know this block", log.BlockId(blk.ID().Uint64()))
 		return true
 	}
 
 	txs, atxs, err := bl.BlockSyntacticValidation(blk)
 	if err != nil {
-		bl.With().Error("failed to validate block", log.BlockId(uint64(blk.ID())), log.Err(err))
+		bl.With().Error("failed to validate block", log.BlockId(blk.ID().Uint64()), log.Err(err))
 		return false
 	}
 
 	if err := bl.AddBlockWithTxs(blk, txs, atxs); err != nil {
-		bl.With().Error("failed to add block to database", log.BlockId(uint64(blk.ID())), log.Err(err))
+		bl.With().Error("failed to add block to database", log.BlockId(blk.ID().Uint64()), log.Err(err))
 		return false
 	}
 
-	bl.With().Info("added block to database", log.BlockId(uint64(blk.ID())))
+	bl.With().Info("added block to database", log.BlockId(blk.ID().Uint64()))
 	return true
 }

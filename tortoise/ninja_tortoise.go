@@ -3,11 +3,8 @@ package tortoise
 import (
 	"fmt"
 	"github.com/spacemeshos/go-spacemesh/common/types"
-	"github.com/spacemeshos/go-spacemesh/common/util"
 	"github.com/spacemeshos/go-spacemesh/log"
-	"hash/fnv"
 	"math"
-	"sort"
 	"sync"
 )
 
@@ -208,15 +205,13 @@ func (ni *ninjaTortoise) processBlock(b *types.Block) {
 }
 
 func getId(bids []types.BlockID) PatternId {
-	sort.Slice(bids, func(i, j int) bool { return bids[i] < bids[j] })
-	// calc
-	h := fnv.New32()
-	for i := 0; i < len(bids); i++ {
-		h.Write(util.Uint32ToBytes(uint32(bids[i])))
+	h, err := types.CalcBlocksHash32(bids)
+	if err != nil {
+		log.Error("could not get id error calculating block hash", log.Err(err))
+		return 0
 	}
 	// update
-	sum := h.Sum32()
-	return PatternId(sum)
+	return PatternId(h.Uint64())
 }
 
 func getIdsFromSet(bids map[types.BlockID]struct{}) PatternId {

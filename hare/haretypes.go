@@ -63,23 +63,24 @@ func (id InstanceId) Bytes() []byte {
 }
 
 func NewValue(value uint64) Value {
-	return Value{types.BlockID(value)}
+	h := types.Hash32{}
+	binary.LittleEndian.PutUint64(h.Bytes(), value)
+	return Value{types.BlockID{Hash32: h}}
 }
 
 func (v Value) Id() objectId {
-	return objectId(v.BlockID)
+	return objectId(v.BlockID.Uint64())
 
 }
 
 func (v Value) Bytes() []byte {
 	b := make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, uint64(v.BlockID))
+	binary.LittleEndian.PutUint64(b, v.BlockID.Uint64())
 	return b
 }
 
 func (v Value) String() string {
-	return strconv.FormatUint(uint64(v.BlockID), 10)
-
+	return strconv.FormatUint(v.BlockID.Uint64(), 10)
 }
 
 func NewBytes32(buff []byte) Bytes32 {
@@ -218,7 +219,7 @@ func (s *Set) ToSlice() []uint64 {
 
 	l := make([]uint64, 0, len(s.values))
 	for i := range keys {
-		l = append(l, uint64(s.values[keys[i]].BlockID))
+		l = append(l, s.values[keys[i]].BlockID.Uint64())
 	}
 	return l
 }

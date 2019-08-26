@@ -217,7 +217,6 @@ func (t *BlockBuilder) createBlock(id types.LayerID, atxID types.AtxId, eligibil
 
 	b := types.MiniBlock{
 		BlockHeader: types.BlockHeader{
-			Id:               types.BlockID(t.rnd.Int63()),
 			LayerIndex:       id,
 			ATXID:            atxID,
 			EligibilityProof: eligibilityProof,

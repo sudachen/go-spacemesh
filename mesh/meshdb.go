@@ -78,7 +78,7 @@ var ErrAlreadyExist = errors.New("block already exist in database")
 
 func (m *MeshDB) AddBlock(bl *types.Block) error {
 	if _, err := m.getMiniBlockBytes(bl.ID()); err == nil {
-		m.With().Warning("Block already exist in database", log.BlockId(uint64(bl.Id)))
+		m.With().Warning("Block already exist in database", log.BlockId(bl.Id.Uint64()))
 		return ErrAlreadyExist
 	}
 	if err := m.writeBlock(bl); err != nil {
@@ -162,7 +162,7 @@ func (m *MeshDB) ForBlockInView(view map[types.BlockID]struct{}, layer types.Lay
 		}
 
 		if stop {
-			m.Log.With().Debug("ForBlockInView stopped", log.BlockId(uint64(block.ID())))
+			m.Log.With().Debug("ForBlockInView stopped", log.BlockId(block.ID().Uint64()))
 			break
 		}
 
@@ -202,11 +202,11 @@ func (m *MeshDB) layerBlockIds(index types.LayerID) ([]types.BlockID, error) {
 }
 
 func (m *MeshDB) getMiniBlockBytes(id types.BlockID) ([]byte, error) {
-	return m.blocks.Get(id.ToBytes())
+	return m.blocks.Get(id.Bytes())
 }
 
 func (m *MeshDB) ContextualValidity(id types.BlockID) (bool, error) {
-	b, err := m.contextualValidity.Get(id.ToBytes())
+	b, err := m.contextualValidity.Get(id.Bytes())
 	if err != nil {
 		return false, err
 	}
@@ -220,7 +220,7 @@ func (m *MeshDB) SaveContextualValidity(id types.BlockID, valid bool) error {
 	} else {
 		v = FALSE
 	}
-	err := m.contextualValidity.Put(id.ToBytes(), v)
+	err := m.contextualValidity.Put(id.Bytes(), v)
 	if err != nil {
 		return err
 	}
@@ -233,7 +233,7 @@ func (m *MeshDB) writeBlock(bl *types.Block) error {
 		return fmt.Errorf("could not encode bl")
 	}
 
-	if err := m.blocks.Put(bl.ID().ToBytes(), bytes); err != nil {
+	if err := m.blocks.Put(bl.ID().Bytes(), bytes); err != nil {
 		return fmt.Errorf("could not add bl to %v databacse %v", bl.ID(), err)
 	}
 

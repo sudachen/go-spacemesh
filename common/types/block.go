@@ -2,15 +2,17 @@ package types
 
 import (
 	"bytes"
-	"encoding/binary"
-	"github.com/google/uuid"
 	"github.com/spacemeshos/go-spacemesh/common/util"
 	"github.com/spacemeshos/go-spacemesh/log"
 	"github.com/spacemeshos/go-spacemesh/signing"
 )
 
-type BlockID uint64
+type BlockID struct {
+	Hash32
+}
+
 type TransactionId [32]byte
+
 type LayerID uint64
 
 func (l LayerID) GetEpoch(layersPerEpoch uint16) EpochId {
@@ -46,7 +48,9 @@ func (id NodeId) ShortString() string {
 }
 
 type BlockHeader struct {
-	Id               BlockID
+	// id is lower case so we won't serialize it since it is calculated
+	// from the block's data
+	id               BlockID
 	LayerIndex       LayerID
 	ATXID            AtxId
 	EligibilityProof BlockEligibilityProof
@@ -157,21 +161,9 @@ func NewAddressableTx(nonce uint64, orig, rec Address, amount, gasLimit, gasPric
 	}
 }
 
-func newBlockHeader(id BlockID, layerID LayerID, coin bool, data []byte, ts int64, viewEdges []BlockID, blockVotes []BlockID) *BlockHeader {
-	b := &BlockHeader{
-		Id:         id,
-		LayerIndex: layerID,
-		BlockVotes: blockVotes,
-		ViewEdges:  viewEdges,
-		Timestamp:  ts,
-		Data:       data,
-		Coin:       coin,
-	}
-	return b
-}
-
 func (b BlockHeader) ID() BlockID {
-	return b.Id
+
+	return b.id
 }
 
 func (b BlockHeader) Layer() LayerID {
@@ -245,22 +237,18 @@ func NewExistingLayer(idx LayerID, blocks []*Block) *Layer {
 	return &l
 }
 
-func NewExistingBlock(id BlockID, layerIndex LayerID, data []byte) *Block {
+func NewExistingBlock(layerIndex LayerID, data []byte) *Block {
 	b := Block{
 		MiniBlock: MiniBlock{
 			BlockHeader: BlockHeader{
-				Id:         BlockID(id),
+				id:         BlockID{},
 				BlockVotes: make([]BlockID, 0, 10),
 				ViewEdges:  make([]BlockID, 0, 10),
 				LayerIndex: LayerID(layerIndex),
 				Data:       data},
 		}}
+	b.id = BlockID{CalcHash32(b.Bytes())}
 	return &b
-}
-
-func RandBlockId() BlockID {
-	id := uuid.New()
-	return BlockID(binary.BigEndian.Uint64(id[:8]))
 }
 
 func NewLayer(layerIndex LayerID) *Layer {

@@ -10,13 +10,11 @@ import (
 	"sort"
 )
 
-func (b BlockID) ToBytes() []byte { return util.Uint64ToBytes(uint64(b)) }
-
 func (l LayerID) ToBytes() []byte { return util.Uint64ToBytes(uint64(l)) }
 
 func BlockIdsAsBytes(ids []BlockID) ([]byte, error) {
 	var w bytes.Buffer
-	sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
+	sort.Slice(ids, func(i, j int) bool { return ids[i].Compare(ids[j].Hash32) == -1 })
 	if _, err := xdr.Marshal(&w, &ids); err != nil {
 		return nil, errors.New("error marshalling block ids ")
 	}

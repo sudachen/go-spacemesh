@@ -196,7 +196,7 @@ func (m *Mesh) ValidateLayer(lyr *types.Layer) {
 
 func SortBlocks(blocks []*types.Block) []*types.Block {
 	//not final sorting method, need to talk about this
-	sort.Slice(blocks, func(i, j int) bool { return blocks[i].ID() < blocks[j].ID() })
+	sort.Slice(blocks, func(i, j int) bool { return blocks[i].ID().Compare(blocks[j].ID().Hash32) == -1 })
 	return blocks
 }
 
@@ -208,12 +208,12 @@ func (m *Mesh) ExtractUniqueOrderedTransactions(l *types.Layer) []*Transaction {
 
 	for _, b := range sortedBlocks {
 		valid, err := m.ContextualValidity(b.ID())
-		events.Publish(events.ValidBlock{Id: uint64(b.ID()), Valid: valid})
+		events.Publish(events.ValidBlock{Id: b.ID().Uint64(), Valid: valid})
 		if !valid {
 			if err != nil {
-				m.With().Error("could not get contextual validity for block", log.BlockId(uint64(b.ID())), log.Err(err))
+				m.With().Error("could not get contextual validity for block", log.BlockId(b.ID().Uint64()), log.Err(err))
 			}
-			m.With().Info("block not contextually valid", log.BlockId(uint64(b.ID()))) // TODO: do we want this log? is it info?
+			m.With().Info("block not contextually valid", log.BlockId(b.ID().Uint64())) // TODO: do we want this log? is it info?
 			continue
 		}
 
@@ -302,7 +302,7 @@ func (m *Mesh) AddBlock(blk *types.Block) error {
 func (m *Mesh) AddBlockWithTxs(blk *types.Block, txs []*types.AddressableSignedTransaction, atxs []*types.ActivationTx) error {
 	m.Debug("add block %d", blk.ID())
 
-	events.Publish(events.NewBlock{Id: uint64(blk.Id), Atx: blk.ATXID.String(), Layer: uint64(blk.LayerIndex)})
+	events.Publish(events.NewBlock{Id: blk.Id.Uint64(), Atx: blk.ATXID.String(), Layer: uint64(blk.LayerIndex)})
 	atxids := make([]types.AtxId, 0, len(atxs))
 	for _, t := range atxs {
 		//todo this should return an error
@@ -316,7 +316,7 @@ func (m *Mesh) AddBlockWithTxs(blk *types.Block, txs []*types.AddressableSignedT
 	}
 
 	if err := m.MeshDB.AddBlock(blk); err != nil && err != ErrAlreadyExist {
-		m.With().Error("failed to add block", log.BlockId(uint64(blk.ID())), log.Err(err))
+		m.With().Error("failed to add block", log.BlockId(blk.ID().Uint64()), log.Err(err))
 		return err
 	}
 
@@ -407,7 +407,7 @@ func (m *Mesh) GetOrphanBlocksBefore(l types.LayerID) ([]types.BlockID, error) {
 		idArr = append(idArr, i)
 	}
 
-	sort.Slice(idArr, func(i, j int) bool { return idArr[i] < idArr[j] })
+	sort.Slice(idArr, func(i, j int) bool { return idArr[i].Compare(idArr[j].Hash32) == -1 })
 
 	m.Info("orphans for layer %d are %v", l, idArr)
 	return idArr, nil
@@ -428,7 +428,7 @@ func (m *Mesh) AccumulateRewards(rewardLayer types.LayerID, params Config) {
 	for _, bl := range l.Blocks() {
 		atx, err := m.AtxDB.GetAtx(bl.ATXID)
 		if err != nil {
-			m.With().Warning("Atx from block not found in db", log.Err(err), log.BlockId(uint64(bl.Id)), log.AtxId(bl.ATXID.ShortString()))
+			m.With().Warning("Atx from block not found in db", log.Err(err), log.BlockId(bl.Id.Uint64()), log.AtxId(bl.ATXID.ShortString()))
 			continue
 		}
 		ids = append(ids, atx.Coinbase)
@@ -460,13 +460,7 @@ func (m *Mesh) AccumulateRewards(rewardLayer types.LayerID, params Config) {
 
 }
 
-var GenesisBlock = types.Block{
-	MiniBlock: types.MiniBlock{
-		BlockHeader: types.BlockHeader{Id: types.BlockID(GenesisId),
-			LayerIndex: 0,
-			Data:       []byte("genesis")},
-	},
-}
+var GenesisBlock = *types.NewExistingBlock(0, []byte("genesis"))
 
 func GenesisLayer() *types.Layer {
 	l := types.NewLayer(Genesis)

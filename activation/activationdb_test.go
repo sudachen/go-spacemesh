@@ -119,13 +119,11 @@ func createLayerWithAtx(t *testing.T, msh *mesh.Mesh, id types.LayerID, numOfBlo
 		panic("not supported")
 	}
 	for i := 0; i < numOfBlocks; i++ {
-		rid := rand.Uint64()
-		bid := types.BlockID(rid)
-		block1 := types.NewExistingBlock(bid, id, []byte("data1"))
+		block1 := types.NewExistingBlock(id, []byte("data1"))
 		block1.BlockVotes = append(block1.BlockVotes, votes...)
 		if i < len(atxs) {
 			block1.AtxIds = append(block1.AtxIds, atxs[i].Id())
-			fmt.Printf("adding i=%v bid=%v atxid=%v", i, bid, atxs[i].Id().String())
+			fmt.Printf("adding i=%v bid=%v atxid=%v", i, block1.Id, atxs[i].Id().String())
 		}
 		block1.ViewEdges = append(block1.ViewEdges, views...)
 		var actualAtxs []*types.ActivationTx

@@ -34,7 +34,7 @@ func CalcBlocksHash12(view []BlockID) (Hash12, error) {
 	sortedView := make([]BlockID, len(view))
 	copy(sortedView, view)
 	sort.Slice(sortedView, func(i, j int) bool {
-		return sortedView[i] < sortedView[j]
+		return sortedView[i].Compare(sortedView[j].Hash32) == -1
 	})
 	viewBytes, err := InterfaceToBytes(sortedView)
 	if err != nil {
@@ -47,7 +47,7 @@ func CalcBlocksHash32(view []BlockID) (Hash32, error) {
 	sortedView := make([]BlockID, len(view))
 	copy(sortedView, view)
 	sort.Slice(sortedView, func(i, j int) bool {
-		return sortedView[i] < sortedView[j]
+		return sortedView[i].Compare(sortedView[j].Hash32) == -1
 	})
 	viewBytes, err := InterfaceToBytes(sortedView)
 	if err != nil {
@@ -118,6 +118,12 @@ func BigToHash(b *big.Int) Hash32 { return BytesToHash(b.Bytes()) }
 // If b is larger than len(h), b will be cropped from the left.
 func HexToHash32(s string) Hash32 { return BytesToHash(util.FromHex(s)) }
 
+// Compare - compares the hash to the provided hash
+// The result will be 0 if a==b, -1 if a < b, and +1 if a > b.
+func (h Hash32) Compare(g Hash32) int {
+	return bytes.Compare(h.Bytes(), g.Bytes())
+}
+
 // Bytes gets the byte representation of the underlying hash.
 func (h Hash32) Bytes() []byte { return h[:] }
 
@@ -131,6 +137,10 @@ func (h Hash32) Hex() string { return util.Encode(h[:]) }
 // output during logging.
 func (h Hash32) TerminalString() string {
 	return fmt.Sprintf("%x…%x", h[:3], h[29:])
+}
+
+func (h Hash32) Uint64() uint64 {
+	return util.BytesToUint64(h.Bytes())
 }
 
 // String implements the stringer interface and is used also by the logger when
