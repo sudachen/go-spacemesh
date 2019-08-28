@@ -15,7 +15,7 @@ type mockPatternProvider struct {
 }
 
 func (mpp *mockPatternProvider) ContextuallyValidBlock(layer types.LayerID) (map[types.BlockID]struct{}, error) {
-	if layer == config.Genesis {
+	if layer == config.GenesisLayerId {
 		return mpp.valGenesis, mpp.err
 	}
 	return mpp.val, mpp.err

@@ -50,7 +50,7 @@ func (id NodeId) ShortString() string {
 type BlockHeader struct {
 	// id is lower case so we won't serialize it since it is calculated
 	// from the block's data
-	id               BlockID
+	id               *BlockID
 	LayerIndex       LayerID
 	ATXID            AtxId
 	EligibilityProof BlockEligibilityProof
@@ -161,9 +161,11 @@ func NewAddressableTx(nonce uint64, orig, rec Address, amount, gasLimit, gasPric
 	}
 }
 
-func (b BlockHeader) ID() BlockID {
-
-	return b.id
+func (b BlockHeader) Id() BlockID {
+	if b.id == nil {
+		log.Panic("id field must be set")
+	}
+	return *b.id
 }
 
 func (b BlockHeader) Layer() LayerID {
@@ -211,7 +213,7 @@ func (l *Layer) Hash() Hash32 {
 	bids := l.blocks
 	keys := make([]BlockID, 0, len(bids))
 	for _, tortoiseBlock := range bids {
-		keys = append(keys, tortoiseBlock.ID())
+		keys = append(keys, tortoiseBlock.Id())
 	}
 	hash, err := CalcBlocksHash32(keys)
 	if err != nil {
@@ -241,13 +243,12 @@ func NewExistingBlock(layerIndex LayerID, data []byte) *Block {
 	b := Block{
 		MiniBlock: MiniBlock{
 			BlockHeader: BlockHeader{
-				id:         BlockID{},
 				BlockVotes: make([]BlockID, 0, 10),
 				ViewEdges:  make([]BlockID, 0, 10),
 				LayerIndex: LayerID(layerIndex),
 				Data:       data},
 		}}
-	b.id = BlockID{CalcHash32(b.Bytes())}
+	b.id = &BlockID{CalcHash32(b.Bytes())}
 	return &b
 }
 

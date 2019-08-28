@@ -53,7 +53,7 @@ func (vq *validationQueue) traverse(s *Syncer, blk *types.BlockHeader) error {
 		return nil
 	}
 
-	vq.callbacks[blk.ID()] = func() error {
+	vq.callbacks[blk.Id()] = func() error {
 		return nil
 	}
 
@@ -61,28 +61,28 @@ func (vq *validationQueue) traverse(s *Syncer, blk *types.BlockHeader) error {
 	for out := range output {
 		block, ok := out.(*types.Block)
 		if !ok || block == nil {
-			return errors.New(fmt.Sprintf("could not retrieve a block in %v view ", blk.ID()))
+			return errors.New(fmt.Sprintf("could not retrieve a block in %v view ", blk.Id()))
 		}
 
-		vq.visited[block.ID()] = struct{}{}
-		s.Info("Checking eligibility for block %v", block.ID())
+		vq.visited[block.Id()] = struct{}{}
+		s.Info("Checking eligibility for block %v", block.Id())
 		if eligable, err := s.BlockSignedAndEligible(block); err != nil || !eligable {
-			return errors.New(fmt.Sprintf("Block %v eligiblety check failed %v", blk.ID(), err))
+			return errors.New(fmt.Sprintf("Block %v eligiblety check failed %v", blk.Id(), err))
 		}
 
-		vq.callbacks[block.ID()] = vq.finishBlockCallback(s, block)
+		vq.callbacks[block.Id()] = vq.finishBlockCallback(s, block)
 
-		s.Info("Validating view for block %v", block.ID())
+		s.Info("Validating view for block %v", block.Id())
 		if vq.addDependencies(&block.BlockHeader, s.GetBlock) == false {
-			if err := vq.addToDatabase(block.ID()); err != nil {
+			if err := vq.addToDatabase(block.Id()); err != nil {
 				return err
 			}
 
-			s.Info("dependencies done for %v", block.ID())
-			doneBlocks := vq.updateDependencies(block.ID())
+			s.Info("dependencies done for %v", block.Id())
+			doneBlocks := vq.updateDependencies(block.Id())
 			for _, bid := range doneBlocks {
 				if err := vq.addToDatabase(bid); err != nil {
-					return errors.New(fmt.Sprintf("could not finalize block %v validation %v", blk.ID(), err))
+					return errors.New(fmt.Sprintf("could not finalize block %v validation %v", blk.Id(), err))
 				}
 			}
 
@@ -108,7 +108,7 @@ func (vq *validationQueue) finishBlockCallback(s *Syncer, block *types.Block) fu
 
 		//validate block's votes
 		if valid := s.validateVotes(block); valid == false {
-			return errors.New(fmt.Sprintf("validate votes failed for block %v", block.ID()))
+			return errors.New(fmt.Sprintf("validate votes failed for block %v", block.Id()))
 		}
 
 		if err := s.AddBlockWithTxs(block, txs, atxs); err != nil {
@@ -152,22 +152,22 @@ func (vq *validationQueue) addDependencies(blk *types.BlockHeader, checkDatabase
 	dependencys := make(map[types.BlockID]struct{})
 	for _, id := range blk.ViewEdges {
 		if vq.inQueue(id) {
-			vq.reverseDepMap[id] = append(vq.reverseDepMap[id], blk.ID())
-			vq.Info("add block %v to %v dependencies map", id, blk.ID())
+			vq.reverseDepMap[id] = append(vq.reverseDepMap[id], blk.Id())
+			vq.Info("add block %v to %v dependencies map", id, blk.Id())
 			dependencys[id] = struct{}{}
 		} else {
 			//	check database
 			if _, err := checkDatabase(id); err != nil {
 				//unknown block add to queue
 				vq.queue <- id
-				vq.reverseDepMap[id] = append(vq.reverseDepMap[id], blk.ID())
-				vq.Info("add block %v to %v dependencies map", id, blk.ID())
+				vq.reverseDepMap[id] = append(vq.reverseDepMap[id], blk.Id())
+				vq.Info("add block %v to %v dependencies map", id, blk.Id())
 				dependencys[id] = struct{}{}
 			}
 		}
 	}
 
-	vq.depMap[blk.ID()] = dependencys
+	vq.depMap[blk.Id()] = dependencys
 	return len(dependencys) > 0
 }
 

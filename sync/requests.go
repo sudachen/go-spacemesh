@@ -89,7 +89,7 @@ func BlockReqFactory() BlockRequestFactory {
 				return
 			}
 
-			if block.ID() != id {
+			if block.Id() != id {
 				s.Info("received block with different id than requested")
 				return
 			}

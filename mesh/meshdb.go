@@ -77,8 +77,8 @@ func (m *MeshDB) Close() {
 var ErrAlreadyExist = errors.New("block already exist in database")
 
 func (m *MeshDB) AddBlock(bl *types.Block) error {
-	if _, err := m.getMiniBlockBytes(bl.ID()); err == nil {
-		m.With().Warning("Block already exist in database", log.BlockId(bl.Id.Uint64()))
+	if _, err := m.getMiniBlockBytes(bl.Id()); err == nil {
+		m.With().Warning("Block already exist in database", log.BlockId(bl.Id().Uint64()))
 		return ErrAlreadyExist
 	}
 	if err := m.writeBlock(bl); err != nil {
@@ -162,7 +162,7 @@ func (m *MeshDB) ForBlockInView(view map[types.BlockID]struct{}, layer types.Lay
 		}
 
 		if stop {
-			m.Log.With().Debug("ForBlockInView stopped", log.BlockId(block.ID().Uint64()))
+			m.Log.With().Debug("ForBlockInView stopped", log.BlockId(block.Id().Uint64()))
 			break
 		}
 
@@ -233,8 +233,8 @@ func (m *MeshDB) writeBlock(bl *types.Block) error {
 		return fmt.Errorf("could not encode bl")
 	}
 
-	if err := m.blocks.Put(bl.ID().Bytes(), bytes); err != nil {
-		return fmt.Errorf("could not add bl to %v databacse %v", bl.ID(), err)
+	if err := m.blocks.Put(bl.Id().Bytes(), bytes); err != nil {
+		return fmt.Errorf("could not add bl to %v databacse %v", bl.Id(), err)
 	}
 
 	m.updateLayerWithBlock(&bl.MiniBlock)
@@ -260,8 +260,8 @@ func (m *MeshDB) updateLayerWithBlock(blk *types.MiniBlock) error {
 			return errors.New("could not get all blocks from database ")
 		}
 	}
-	m.Debug("added block %v to layer %v", blk.ID(), blk.LayerIndex)
-	blockIds = append(blockIds, blk.ID())
+	m.Debug("added block %v to layer %v", blk.Id(), blk.LayerIndex)
+	blockIds = append(blockIds, blk.Id())
 	w, err := types.BlockIdsAsBytes(blockIds)
 	if err != nil {
 		return errors.New("could not encode layer blk ids")
@@ -373,17 +373,17 @@ func (m *MeshDB) ContextuallyValidBlock(layer types.LayerID) (map[types.BlockID]
 	validBlks := make(map[types.BlockID]struct{})
 
 	for _, b := range blks {
-		valid, err := m.ContextualValidity(b.ID())
+		valid, err := m.ContextualValidity(b.Id())
 
 		if err != nil {
-			m.Error("could not get contextual validity for block %v in layer %v err=%v", b.ID(), layer, err)
+			m.Error("could not get contextual validity for block %v in layer %v err=%v", b.Id(), layer, err)
 		}
 
 		if !valid {
 			continue
 		}
 
-		validBlks[b.ID()] = struct{}{}
+		validBlks[b.Id()] = struct{}{}
 	}
 
 	return validBlks, nil

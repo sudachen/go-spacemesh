@@ -277,7 +277,7 @@ func TestNinjaTortoise_Sanity2(t *testing.T) {
 	for b, vec := range alg.tTally[alg.pBase] {
 		alg.Debug("------> tally for block %d according to complete pattern %d are %d", b, alg.pBase, vec)
 	}
-	assert.True(t, alg.tTally[alg.pBase][l.Blocks()[0].ID()] == vec{5, 0}, "lyr %d tally was %d insted of %d", 0, alg.tTally[alg.pBase][l.Blocks()[0].ID()], vec{5, 0})
+	assert.True(t, alg.tTally[alg.pBase][l.Blocks()[0].Id()] == vec{5, 0}, "lyr %d tally was %d insted of %d", 0, alg.tTally[alg.pBase][l.Blocks()[0].Id()], vec{5, 0})
 }
 
 func createMulExplicitLayer(index types.LayerID, prev map[types.LayerID]*types.Layer, patterns map[types.LayerID][]int, blocksInLayer int) *types.Layer {
@@ -285,17 +285,17 @@ func createMulExplicitLayer(index types.LayerID, prev map[types.LayerID]*types.L
 	layerBlocks := make([]types.BlockID, 0, blocksInLayer)
 	for i := 0; i < blocksInLayer; i++ {
 		bl := types.NewExistingBlock(types.BlockID(uuid.New().ID()), index, []byte("data data data"))
-		layerBlocks = append(layerBlocks, bl.ID())
+		layerBlocks = append(layerBlocks, bl.Id())
 
 		for lyrId, pat := range patterns {
 			for _, id := range pat {
 				b := prev[lyrId].Blocks()[id]
-				bl.AddVote(types.BlockID(b.ID()))
+				bl.AddVote(types.BlockID(b.Id()))
 			}
 		}
 		if index > 0 {
 			for _, prevBloc := range prev[index-1].Blocks() {
-				bl.AddView(types.BlockID(prevBloc.ID()))
+				bl.AddView(types.BlockID(prevBloc.Id()))
 			}
 		}
 		l.AddBlock(bl)
@@ -317,12 +317,12 @@ func createLayerWithCorruptedPattern(index types.LayerID, prev *types.Layer, blo
 	layerBlocks := make([]types.BlockID, 0, blocksInLayer)
 	for i := 0; i < gbs; i++ {
 		bl := addPattern(types.NewExistingBlock(types.BlockID(uuid.New().ID()), index, []byte("data data data")), goodPattern, prev)
-		layerBlocks = append(layerBlocks, bl.ID())
+		layerBlocks = append(layerBlocks, bl.Id())
 		l.AddBlock(bl)
 	}
 	for i := 0; i < blocksInLayer-gbs; i++ {
 		bl := addPattern(types.NewExistingBlock(types.BlockID(uuid.New().ID()), index, []byte("data data data")), badPattern, prev)
-		layerBlocks = append(layerBlocks, bl.ID())
+		layerBlocks = append(layerBlocks, bl.Id())
 		l.AddBlock(bl)
 	}
 
@@ -333,10 +333,10 @@ func createLayerWithCorruptedPattern(index types.LayerID, prev *types.Layer, blo
 func addPattern(bl *types.Block, goodPattern []int, prev *types.Layer) *types.Block {
 	for _, id := range goodPattern {
 		b := prev.Blocks()[id]
-		bl.AddVote(types.BlockID(b.ID()))
+		bl.AddVote(types.BlockID(b.Id()))
 	}
 	for _, prevBloc := range prev.Blocks() {
-		bl.AddView(types.BlockID(prevBloc.ID()))
+		bl.AddView(types.BlockID(prevBloc.Id()))
 	}
 	return bl
 }
@@ -352,15 +352,15 @@ func createLayerWithRandVoting(index types.LayerID, prev []*types.Layer, blocksI
 	layerBlocks := make([]types.BlockID, 0, blocksInLayer)
 	for i := 0; i < blocksInLayer; i++ {
 		bl := types.NewExistingBlock(types.BlockID(uuid.New().ID()), index, []byte("data data data"))
-		layerBlocks = append(layerBlocks, bl.ID())
+		layerBlocks = append(layerBlocks, bl.Id())
 		for idx, pat := range patterns {
 			for _, id := range pat {
 				b := prev[idx].Blocks()[id]
-				bl.AddVote(types.BlockID(b.ID()))
+				bl.AddVote(types.BlockID(b.Id()))
 			}
 		}
 		for _, prevBloc := range prev[0].Blocks() {
-			bl.AddView(types.BlockID(prevBloc.ID()))
+			bl.AddView(types.BlockID(prevBloc.Id()))
 		}
 		l.AddBlock(bl)
 	}

@@ -16,7 +16,6 @@ import (
 const (
 	layerSize   = 200
 	Genesis     = types.LayerID(0)
-	GenesisId   = 420
 	TxCacheSize = 1000
 )
 
@@ -196,7 +195,7 @@ func (m *Mesh) ValidateLayer(lyr *types.Layer) {
 
 func SortBlocks(blocks []*types.Block) []*types.Block {
 	//not final sorting method, need to talk about this
-	sort.Slice(blocks, func(i, j int) bool { return blocks[i].ID().Compare(blocks[j].ID().Hash32) == -1 })
+	sort.Slice(blocks, func(i, j int) bool { return blocks[i].Id().Compare(blocks[j].Id().Hash32) == -1 })
 	return blocks
 }
 
@@ -207,13 +206,13 @@ func (m *Mesh) ExtractUniqueOrderedTransactions(l *types.Layer) []*Transaction {
 	txids := make(map[types.TransactionId]struct{})
 
 	for _, b := range sortedBlocks {
-		valid, err := m.ContextualValidity(b.ID())
-		events.Publish(events.ValidBlock{Id: b.ID().Uint64(), Valid: valid})
+		valid, err := m.ContextualValidity(b.Id())
+		events.Publish(events.ValidBlock{Id: b.Id().Uint64(), Valid: valid})
 		if !valid {
 			if err != nil {
-				m.With().Error("could not get contextual validity for block", log.BlockId(b.ID().Uint64()), log.Err(err))
+				m.With().Error("could not get contextual validity for block", log.BlockId(b.Id().Uint64()), log.Err(err))
 			}
-			m.With().Info("block not contextually valid", log.BlockId(b.ID().Uint64())) // TODO: do we want this log? is it info?
+			m.With().Info("block not contextually valid", log.BlockId(b.Id().Uint64())) // TODO: do we want this log? is it info?
 			continue
 		}
 
@@ -279,15 +278,15 @@ func (m *Mesh) GetLatestView() []types.BlockID {
 	}
 	view := make([]types.BlockID, 0, len(layer.Blocks()))
 	for _, blk := range layer.Blocks() {
-		view = append(view, blk.Id)
+		view = append(view, blk.Id())
 	}
 	return view
 }
 
 func (m *Mesh) AddBlock(blk *types.Block) error {
-	m.Debug("add block %d", blk.ID())
+	m.Debug("add block %d", blk.Id())
 	if err := m.MeshDB.AddBlock(blk); err != nil {
-		m.Warning("failed to add block %v  %v", blk.ID(), err)
+		m.Warning("failed to add block %v  %v", blk.Id(), err)
 		return err
 	}
 	m.SetLatestLayer(blk.Layer())
@@ -300,9 +299,9 @@ func (m *Mesh) AddBlock(blk *types.Block) error {
 }
 
 func (m *Mesh) AddBlockWithTxs(blk *types.Block, txs []*types.AddressableSignedTransaction, atxs []*types.ActivationTx) error {
-	m.Debug("add block %d", blk.ID())
+	m.Debug("add block %d", blk.Id())
 
-	events.Publish(events.NewBlock{Id: blk.Id.Uint64(), Atx: blk.ATXID.String(), Layer: uint64(blk.LayerIndex)})
+	events.Publish(events.NewBlock{Id: blk.Id().Uint64(), Atx: blk.ATXID.String(), Layer: uint64(blk.LayerIndex)})
 	atxids := make([]types.AtxId, 0, len(atxs))
 	for _, t := range atxs {
 		//todo this should return an error
@@ -312,11 +311,11 @@ func (m *Mesh) AddBlockWithTxs(blk *types.Block, txs []*types.AddressableSignedT
 
 	err := m.writeTransactions(txs)
 	if err != nil {
-		return fmt.Errorf("could not write transactions of block %v database %v", blk.ID(), err)
+		return fmt.Errorf("could not write transactions of block %v database %v", blk.Id(), err)
 	}
 
 	if err := m.MeshDB.AddBlock(blk); err != nil && err != ErrAlreadyExist {
-		m.With().Error("failed to add block", log.BlockId(blk.ID().Uint64()), log.Err(err))
+		m.With().Error("failed to add block", log.BlockId(blk.Id().Uint64()), log.Err(err))
 		return err
 	}
 
@@ -327,7 +326,7 @@ func (m *Mesh) AddBlockWithTxs(blk *types.Block, txs []*types.AddressableSignedT
 	//invalidate txs and atxs from pool
 	m.invalidateFromPools(&blk.MiniBlock)
 
-	m.Debug("added block %d", blk.ID())
+	m.Debug("added block %d", blk.Id())
 	return nil
 }
 
@@ -348,8 +347,8 @@ func (m *Mesh) handleOrphanBlocks(blk *types.BlockHeader) {
 	if _, ok := m.orphanBlocks[blk.Layer()]; !ok {
 		m.orphanBlocks[blk.Layer()] = make(map[types.BlockID]struct{})
 	}
-	m.orphanBlocks[blk.Layer()][blk.ID()] = struct{}{}
-	m.Info("Added block %d to orphans", blk.ID())
+	m.orphanBlocks[blk.Layer()][blk.Id()] = struct{}{}
+	m.Info("Added block %d to orphans", blk.Id())
 	for _, b := range blk.ViewEdges {
 		for layerId, layermap := range m.orphanBlocks {
 			if _, has := layermap[b]; has {
@@ -428,7 +427,7 @@ func (m *Mesh) AccumulateRewards(rewardLayer types.LayerID, params Config) {
 	for _, bl := range l.Blocks() {
 		atx, err := m.AtxDB.GetAtx(bl.ATXID)
 		if err != nil {
-			m.With().Warning("Atx from block not found in db", log.Err(err), log.BlockId(bl.Id.Uint64()), log.AtxId(bl.ATXID.ShortString()))
+			m.With().Warning("Atx from block not found in db", log.Err(err), log.BlockId(bl.Id().Uint64()), log.AtxId(bl.ATXID.ShortString()))
 			continue
 		}
 		ids = append(ids, atx.Coinbase)

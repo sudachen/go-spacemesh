@@ -194,7 +194,7 @@ func TestBlockBuilder_BlockIdGeneration(t *testing.T) {
 
 	b2, _ := builder2.createBlock(1, types.AtxId{}, types.BlockEligibilityProof{}, nil, nil)
 
-	assert.True(t, b1.ID() != b2.ID(), "ids are identical")
+	assert.True(t, b1.Id() != b2.Id(), "ids are identical")
 }
 
 func TestBlockBuilder_CreateBlock(t *testing.T) {

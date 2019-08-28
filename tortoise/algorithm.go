@@ -24,7 +24,7 @@ func NewAlgorithm(layerSize int, mdb *mesh.MeshDB, hdist int, lg log.Log) *Algor
 }
 func (alg *Algorithm) HandleLateBlock(b *types.Block) {
 	//todo feed all layers from b's layer to tortoise
-	log.Info("received block with mesh.LayerID %v block id: %v ", b.Layer(), b.ID())
+	log.Info("received block with mesh.LayerID %v block id: %v ", b.Layer(), b.Id())
 }
 
 func (alg *Algorithm) HandleIncomingLayer(ll *types.Layer) (types.LayerID, types.LayerID) {

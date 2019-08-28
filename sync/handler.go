@@ -36,7 +36,7 @@ func newLayerBlockIdsRequestHandler(layers *mesh.Mesh, logger log.Log) func(msg 
 
 		ids := make([]types.BlockID, 0, len(blocks))
 		for _, b := range blocks {
-			ids = append(ids, b.ID())
+			ids = append(ids, b.Id())
 		}
 
 		idbytes, err := types.BlockIdsAsBytes(ids)
@@ -52,7 +52,8 @@ func newLayerBlockIdsRequestHandler(layers *mesh.Mesh, logger log.Log) func(msg 
 
 func newBlockRequestHandler(msh *mesh.Mesh, logger log.Log) func(msg []byte) []byte {
 	return func(msg []byte) []byte {
-		blockid := types.BlockID(util.BytesToUint64(msg))
+		// TODO: is it ok?
+		blockid := types.BlockID{Hash32: types.BytesToHash(msg)}
 		logger.Debug("handle block %v request", blockid)
 		blk, err := msh.GetBlock(blockid)
 		if err != nil {
@@ -62,11 +63,11 @@ func newBlockRequestHandler(msh *mesh.Mesh, logger log.Log) func(msg []byte) []b
 
 		bbytes, err := types.InterfaceToBytes(blk)
 		if err != nil {
-			logger.Error("Error marshaling response message (FetchBlockResp), with BlockID: %d, LayerID: %d and err:", blk.ID(), blk.Layer(), err)
+			logger.Error("Error marshaling response message (FetchBlockResp), with BlockID: %d, LayerID: %d and err:", blk.Id(), blk.Layer(), err)
 			return nil
 		}
 
-		logger.Debug("send block response, block %v", blk.ID())
+		logger.Debug("send block response, block %v", blk.Id())
 
 		return bbytes
 	}

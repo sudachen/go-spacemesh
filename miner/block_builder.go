@@ -193,10 +193,10 @@ func (t *BlockBuilder) createBlock(id types.LayerID, atxID types.AtxId, eligibil
 
 	var votes []types.BlockID = nil
 	var err error
-	if id == config.Genesis {
+	if id == config.GenesisLayerId {
 		return nil, errors.New("cannot create blockBytes in genesis layer")
-	} else if id == config.Genesis+1 {
-		votes = append(votes, config.GenesisId)
+	} else if id == config.GenesisLayerId+1 {
+		votes = append(votes, mesh.GenesisBlock.Id())
 	} else {
 		bottom, top := calcHdistRange(id, t.hdist)
 		votes, err = t.hareResult.GetResult(bottom, top)

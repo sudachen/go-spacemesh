@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/spacemeshos/go-spacemesh/common/types"
+	"github.com/spacemeshos/go-spacemesh/common/util"
 	"hash/fnv"
 	"sort"
 	"strconv"
@@ -149,7 +150,9 @@ func NewSet(data []uint64) *Set {
 	s.values = make(map[objectId]Value, len(data))
 	for i := 0; i < len(data); i++ {
 		bid := data[i]
-		s.values[objectId(bid)] = Value{types.BlockID(bid)}
+		asBytes := util.Uint64ToBytes(bid)
+		asHash32 := types.BytesToHash(asBytes)
+		s.values[objectId(bid)] = Value{types.BlockID{Hash32: asHash32}}
 	}
 
 	return s

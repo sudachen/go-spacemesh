@@ -59,7 +59,7 @@ type Oracle struct {
 // safe layer is defined to be the confidence param layers prior to the provided Layer
 func safeLayer(layer types.LayerID, safetyParam types.LayerID) types.LayerID {
 	if layer <= safetyParam { // assuming genesis is zero
-		return config.Genesis
+		return config.GenesisLayerId
 	}
 
 	return layer - safetyParam
@@ -69,7 +69,7 @@ func roundedSafeLayer(layer types.LayerID, safetyParam types.LayerID,
 	layersPerEpoch uint16, epochOffset types.LayerID) types.LayerID {
 
 	sl := safeLayer(layer, safetyParam)
-	if sl == config.Genesis {
+	if sl == config.GenesisLayerId {
 		return sl
 	}
 
@@ -81,7 +81,7 @@ func roundedSafeLayer(layer types.LayerID, safetyParam types.LayerID,
 	}
 
 	if threshold <= types.LayerID(layersPerEpoch) { // we can't go before genesis
-		return config.Genesis // just return genesis
+		return config.GenesisLayerId // just return genesis
 	}
 
 	// round to the previous epoch threshold

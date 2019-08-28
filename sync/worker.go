@@ -134,7 +134,7 @@ func NewBlockWorker(s *Syncer, count int, reqFactory BlockRequestFactory, ids ch
 				case v := <-ch:
 					if i, ok := v.(*types.Block); ok {
 						retrived = true
-						s.Info("Peer: %v responded to %v block request ", peer, i.ID())
+						s.Info("Peer: %v responded to %v block request ", peer, i.Id())
 						output <- v
 						break next
 					}

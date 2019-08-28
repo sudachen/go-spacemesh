@@ -209,13 +209,13 @@ func TestSyncProtocol_BlockRequest(t *testing.T) {
 	syncObj.AddBlockWithTxs(block, []*types.AddressableSignedTransaction{tx1}, []*types.ActivationTx{atx1})
 	syncObj2.Peers = getPeersMock([]p2p.Peer{nodes[0].PublicKey()})
 
-	output := syncObj2.fetchWithFactory(NewBlockWorker(syncObj2, 1, BlockReqFactory(), blockSliceToChan([]types.BlockID{block.ID()})))
+	output := syncObj2.fetchWithFactory(NewBlockWorker(syncObj2, 1, BlockReqFactory(), blockSliceToChan([]types.BlockID{block.Id()})))
 
 	timeout := time.NewTimer(2 * time.Second)
 
 	select {
 	case a := <-output:
-		assert.Equal(t, a.(*types.Block).ID(), block.ID(), "wrong block")
+		assert.Equal(t, a.(*types.Block).Id(), block.Id(), "wrong block")
 	case <-timeout.C:
 		assert.Fail(t, "no message received on channel")
 	}
@@ -360,7 +360,7 @@ func TestSyncProtocol_LayerIdsRequest(t *testing.T) {
 		for _, a := range layer.Blocks() {
 			found := false
 			for _, id := range ids {
-				if a.ID() == types.BlockID(id) {
+				if a.Id() == types.BlockID(id) {
 					found = true
 					break
 				}
@@ -401,11 +401,11 @@ func TestSyncProtocol_FetchBlocks(t *testing.T) {
 	syncObj1.AddBlockWithTxs(block3, []*types.AddressableSignedTransaction{tx1, tx2, tx3, tx4, tx5, tx6, tx7, tx8}, []*types.ActivationTx{atx3})
 
 	ch := make(chan types.BlockID, 3)
-	ch <- block1.ID()
-	ch <- block2.ID()
-	ch <- block3.ID()
+	ch <- block1.Id()
+	ch <- block2.Id()
+	ch <- block3.Id()
 
-	output := syncObj2.fetchWithFactory(NewBlockWorker(syncObj2, 1, BlockReqFactory(), blockSliceToChan([]types.BlockID{block1.ID(), block2.ID(), block3.ID()})))
+	output := syncObj2.fetchWithFactory(NewBlockWorker(syncObj2, 1, BlockReqFactory(), blockSliceToChan([]types.BlockID{block1.Id(), block2.Id(), block3.Id()})))
 
 	for out := range output {
 		block := out.(*types.Block)
@@ -944,9 +944,9 @@ func TestFetchLayerBlockIds(t *testing.T) {
 	syncObj2.AddBlock(block2)
 
 	mp := map[types.Hash32][]p2p.Peer{}
-	hash1, _ := types.CalcBlocksHash32([]types.BlockID{block1.ID()})
+	hash1, _ := types.CalcBlocksHash32([]types.BlockID{block1.Id()})
 	mp[hash1] = append(mp[hash1], nodes[0].PublicKey())
-	hash2, _ := types.CalcBlocksHash32([]types.BlockID{block2.ID()})
+	hash2, _ := types.CalcBlocksHash32([]types.BlockID{block2.Id()})
 	mp[hash2] = append(mp[hash2], nodes[1].PublicKey())
 	ids, _ := syncObj3.fetchLayerBlockIds(mp, 1)
 

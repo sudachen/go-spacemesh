@@ -83,7 +83,7 @@ func createLayerWithRandVoting(index types.LayerID, prev []*types.Layer, blocksI
 	layerBlocks := make([]types.BlockID, 0, blocksInLayer)
 	for i := 0; i < blocksInLayer; i++ {
 		bl := types.NewExistingBlock(types.RandBlockId(), 0, []byte("data data data"))
-		layerBlocks = append(layerBlocks, bl.ID())
+		layerBlocks = append(layerBlocks, bl.Id())
 		for idx, pat := range patterns {
 			for _, id := range pat {
 				b := prev[idx].Blocks()[id]
@@ -116,7 +116,7 @@ func testForeachInView(mdb *MeshDB, t *testing.T) {
 	blocks := make(map[types.BlockID]*types.Block)
 	l := GenesisLayer()
 	gen := l.Blocks()[0]
-	blocks[gen.ID()] = gen
+	blocks[gen.Id()] = gen
 
 	if err := mdb.AddBlock(gen); err != nil {
 		t.Fail()
@@ -125,7 +125,7 @@ func testForeachInView(mdb *MeshDB, t *testing.T) {
 	for i := 0; i < 4; i++ {
 		lyr := createLayerWithRandVoting(l.Index()+1, []*types.Layer{l}, 2, 2, log.NewDefault("msh"))
 		for _, b := range lyr.Blocks() {
-			blocks[b.ID()] = b
+			blocks[b.Id()] = b
 			mdb.AddBlock(b)
 		}
 		l = lyr
@@ -142,7 +142,7 @@ func testForeachInView(mdb *MeshDB, t *testing.T) {
 	}
 	mdb.ForBlockInView(ids, 0, foo)
 	for _, bl := range blocks {
-		_, found := mp[bl.ID()]
+		_, found := mp[bl.Id()]
 		assert.True(t, found, "did not process block  ", bl)
 	}
 }
@@ -152,7 +152,7 @@ func TestForEachInView_InMem_WithStop(t *testing.T) {
 	blocks := make(map[types.BlockID]*types.Block)
 	l := GenesisLayer()
 	gen := l.Blocks()[0]
-	blocks[gen.ID()] = gen
+	blocks[gen.Id()] = gen
 
 	if err := mdb.AddBlock(gen); err != nil {
 		t.Fail()
@@ -161,7 +161,7 @@ func TestForEachInView_InMem_WithStop(t *testing.T) {
 	for i := 0; i < 4; i++ {
 		lyr := createLayerWithRandVoting(l.Index()+1, []*types.Layer{l}, 2, 2, log.NewDefault("msh"))
 		for _, b := range lyr.Blocks() {
-			blocks[b.ID()] = b
+			blocks[b.Id()] = b
 			mdb.AddBlock(b)
 		}
 		l = lyr
@@ -188,7 +188,7 @@ func TestForEachInView_InMem_WithLimitedLayer(t *testing.T) {
 	blocks := make(map[types.BlockID]*types.Block)
 	l := GenesisLayer()
 	gen := l.Blocks()[0]
-	blocks[gen.ID()] = gen
+	blocks[gen.Id()] = gen
 
 	if err := mdb.AddBlock(gen); err != nil {
 		t.Fail()
@@ -197,7 +197,7 @@ func TestForEachInView_InMem_WithLimitedLayer(t *testing.T) {
 	for i := 0; i < 4; i++ {
 		lyr := createLayerWithRandVoting(l.Index()+1, []*types.Layer{l}, 2, 2, log.NewDefault("msh"))
 		for _, b := range lyr.Blocks() {
-			blocks[b.ID()] = b
+			blocks[b.Id()] = b
 			mdb.AddBlock(b)
 		}
 		l = lyr

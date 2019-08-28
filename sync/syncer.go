@@ -366,16 +366,16 @@ func (s *Syncer) GetFullBlocks(blockIds []types.BlockID) []*types.Block {
 		if block != nil && ok {
 			txs, atxs, err := s.BlockSyntacticValidation(block)
 			if err != nil {
-				s.Error("failed to validate block %v %v", block.ID(), err)
+				s.Error("failed to validate block %v %v", block.Id(), err)
 				continue
 			}
 
 			if err := s.AddBlockWithTxs(block, txs, atxs); err != nil {
-				s.Error("failed to add block %v to database %v", block.ID(), err)
+				s.Error("failed to add block %v to database %v", block.Id(), err)
 				continue
 			}
 
-			s.Info("added block %v to layer %v", block.ID(), block.Layer())
+			s.Info("added block %v to layer %v", block.Id(), block.Layer())
 			blocksArr = append(blocksArr, block)
 		}
 	}
@@ -399,12 +399,12 @@ func (s *Syncer) BlockSyntacticValidation(block *types.Block) ([]*types.Addressa
 	//validate block's view
 	valid := s.ValidateView(block)
 	if valid == false {
-		return nil, nil, errors.New(fmt.Sprintf("block %v not syntacticly valid", block.ID()))
+		return nil, nil, errors.New(fmt.Sprintf("block %v not syntacticly valid", block.Id()))
 	}
 
 	//validate block's votes
 	if valid := s.validateVotes(block); valid == false {
-		return nil, nil, errors.New(fmt.Sprintf("validate votes failed for block %v", block.ID()))
+		return nil, nil, errors.New(fmt.Sprintf("validate votes failed for block %v", block.Id()))
 	}
 
 	return txs, atxs, nil
@@ -413,7 +413,7 @@ func (s *Syncer) BlockSyntacticValidation(block *types.Block) ([]*types.Addressa
 func (s *Syncer) ValidateView(blk *types.Block) bool {
 	vq := NewValidationQueue(s.Log.WithName("validQ"))
 	if err := vq.traverse(s, &blk.BlockHeader); err != nil {
-		s.Error("could not validate %v view %v", blk.ID(), err)
+		s.Error("could not validate %v view %v", blk.Id(), err)
 		return false
 	}
 	return true
@@ -431,8 +431,8 @@ func (s *Syncer) validateVotes(blk *types.Block) bool {
 	}
 
 	traverse := func(b *types.Block) (stop bool, err error) {
-		if _, ok := vote[b.ID()]; ok {
-			delete(vote, b.ID())
+		if _, ok := vote[b.Id()]; ok {
+			delete(vote, b.Id())
 		}
 		return len(vote) == 0, nil
 	}
@@ -483,11 +483,11 @@ func (s *Syncer) DataAvailability(blk *types.Block) ([]*types.AddressableSignedT
 	wg.Wait()
 
 	if txerr != nil || atxerr != nil {
-		s.Warning("failed fetching block %v txs/atxs. txerr - %v atxerr - %v", blk.ID(), txerr, atxerr)
+		s.Warning("failed fetching block %v txs/atxs. txerr - %v atxerr - %v", blk.Id(), txerr, atxerr)
 		return txs, txerr, atxs, atxerr
 	}
 
-	s.Info("fetched all block data %v", blk.ID())
+	s.Info("fetched all block data %v", blk.Id())
 	return txs, nil, atxs, nil
 }
 

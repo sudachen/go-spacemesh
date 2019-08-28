@@ -136,8 +136,8 @@ func TestBlockListener(t *testing.T) {
 	block3.Signature = signer.Sign(block3.Bytes())
 	block3.AtxIds = append(block3.AtxIds, atx3.Id())
 
-	block1.AddView(block2.ID())
-	block1.AddView(block3.ID())
+	block1.AddView(block2.Id())
+	block1.AddView(block3.Id())
 
 	bl1.AddBlock(block1)
 	bl1.AddBlock(block2)
@@ -407,18 +407,18 @@ func TestBlockListenerViewTraversal(t *testing.T) {
 	block10.Signature = signer.Sign(block10.Bytes())
 	block10.Id = 10
 
-	block2.AddView(block1.ID())
-	block3.AddView(block2.ID())
-	block4.AddView(block2.ID())
-	block5.AddView(block3.ID())
-	block5.AddView(block4.ID())
-	block6.AddView(block4.ID())
-	block7.AddView(block6.ID())
-	block7.AddView(block5.ID())
-	block8.AddView(block7.ID())
-	block9.AddView(block5.ID())
-	block10.AddView(block8.ID())
-	block10.AddView(block9.ID())
+	block2.AddView(block1.Id())
+	block3.AddView(block2.Id())
+	block4.AddView(block2.Id())
+	block5.AddView(block3.Id())
+	block5.AddView(block4.Id())
+	block6.AddView(block4.Id())
+	block7.AddView(block6.Id())
+	block7.AddView(block5.Id())
+	block8.AddView(block7.Id())
+	block9.AddView(block5.Id())
+	block10.AddView(block8.Id())
+	block10.AddView(block9.Id())
 
 	bl1.AddBlock(block1)
 	bl1.AddBlock(block2)
@@ -517,11 +517,11 @@ func TestBlockListener_TraverseViewBadFlow(t *testing.T) {
 	block5.Signature = signer.Sign(block5.Bytes())
 	block5.Id = 5
 
-	block2.AddView(block1.ID())
-	block3.AddView(block2.ID())
-	block4.AddView(block2.ID())
-	block5.AddView(block3.ID())
-	block5.AddView(block4.ID())
+	block2.AddView(block1.Id())
+	block3.AddView(block2.Id())
+	block4.AddView(block2.Id())
+	block5.AddView(block3.Id())
+	block5.AddView(block4.Id())
 
 	bl1.AddBlock(block2)
 	bl1.AddBlock(block3)

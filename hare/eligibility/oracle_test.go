@@ -122,7 +122,7 @@ func TestOracle_IsEligible(t *testing.T) {
 
 func Test_safeLayer(t *testing.T) {
 	const safety = 25
-	assert.Equal(t, config.Genesis, safeLayer(1, safety))
+	assert.Equal(t, config.GenesisLayerId, safeLayer(1, safety))
 	assert.Equal(t, types.LayerID(100-safety), safeLayer(100, safety))
 }
 
@@ -284,13 +284,13 @@ func TestOracle_roundedSafeLayer(t *testing.T) {
 	const offset = 3
 	r := require.New(t)
 	v := roundedSafeLayer(1, 1, 1, offset)
-	r.Equal(config.Genesis, v)
+	r.Equal(config.GenesisLayerId, v)
 	v = roundedSafeLayer(1, 5, 1, offset)
-	r.Equal(config.Genesis, v)
+	r.Equal(config.GenesisLayerId, v)
 	v = roundedSafeLayer(50, 5, 10, offset)
 	r.Equal(types.LayerID(43), v)
 	v = roundedSafeLayer(2, 1, 4, 2)
-	r.Equal(config.Genesis, v)
+	r.Equal(config.GenesisLayerId, v)
 	v = roundedSafeLayer(10, 1, 4, offset)
 	r.Equal(types.LayerID(4+offset), v)
 }
