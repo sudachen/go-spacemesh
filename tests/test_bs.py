@@ -160,8 +160,7 @@ def get_conf(bs_info, client_config, setup_oracle=None, setup_poet=None, args=No
     if setup_poet:
         if poet_port is None:
             poet_port = POET_SERVER_PORT
-            client_args['poet_server'] = '{0}:{1}'.format(setup_poet, poet_port)
-        client_args['poet_server'] = '{0}:{1}'.format(setup_poet, POET_SERVER_PORT)
+        client_args['poet_server'] = '{0}:{1}'.format(setup_poet, poet_port)
 
     cspec.append_args(bootnodes=node_string(bs_info['key'], bs_info['pod_ip'], BOOTSTRAP_PORT, BOOTSTRAP_PORT),
                       genesis_time=GENESIS_TIME.isoformat('T', 'seconds'))
