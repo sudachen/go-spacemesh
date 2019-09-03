@@ -164,7 +164,7 @@ func (c *FormattedConnection) publish(message []byte) {
 // Concurrency: can be called from any go routine
 func (c *FormattedConnection) Send(m []byte) error {
 	c.wmtx.Lock()
-	c.deadliner.SetReadDeadline(time.Now().Add(c.deadline))
+	c.deadliner.SetWriteDeadline(time.Now().Add(c.deadline))
 	if c.closed {
 		c.wmtx.Unlock()
 		return fmt.Errorf("connection was closed")
