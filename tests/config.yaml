@@ -22,22 +22,22 @@ bootstrap:
       cpu: '2'
   args:
     randcon: '8'
-    hare-committee-size: '50'
-    hare-max-adversaries: '24'
-    hare-round-duration-sec: '10'
-    hare-exp-leaders: '10'
-    layer-duration-sec: '60'
-    layer-average-size: '50'
-    hare-wakeup-delta: '10'
-    layers-per-epoch: '3'
+    hare-committee-size: '130'
+    hare-max-adversaries: '65'
+    hare-round-duration-sec: '30'
+    layer-duration-sec: '180'
+    layer-average-size: '200'
+    hare-wakeup-delta: '30'
+    layers-per-epoch: '5'
+    hare-exp-leaders: '5'
     coinbase: '0x4321'
-    eligibility-confidence-param: '5'
+    eligibility-confidence-param: '8'
     eligibility-epoch-offset: '0'
-    genesis-active-size: '50'
+    genesis-active-size: '250'
 client:
   image: 'spacemeshos/go-spacemesh:develop'
   command: '/bin/go-spacemesh'
-  replicas: 49
+  replicas: 249
   resources:
     requests:
       memory: '1024M'
@@ -47,18 +47,18 @@ client:
       cpu: '2'
   args:
     randcon: '8'
-    hare-committee-size: '50'
-    hare-max-adversaries: '24'
-    hare-round-duration-sec: '10'
-    hare-exp-leaders: '10'
-    layer-duration-sec: '60'
-    layer-average-size: '50'
-    hare-wakeup-delta: '10'
-    layers-per-epoch: '3'
+    hare-committee-size: '130'
+    hare-max-adversaries: '65'
+    hare-round-duration-sec: '30'
+    layer-duration-sec: '180'
+    layer-average-size: '200'
+    hare-wakeup-delta: '30'
+    layers-per-epoch: '5'
+    hare-exp-leaders: '5'
     coinbase: '0x1234'
-    eligibility-confidence-param: '5'
+    eligibility-confidence-param: '8'
     eligibility-epoch-offset: '0'
-    genesis-active-size: '50'
+    genesis-active-size: '250'
 elastic:
   host: elastic.spacemesh.io
   port: 9200
