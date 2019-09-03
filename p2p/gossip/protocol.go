@@ -92,20 +92,28 @@ func (prot *Protocol) markMessageAsOld(h types.Hash12) bool {
 
 func (prot *Protocol) propagateMessage(payload []byte, h types.Hash12, nextProt string, exclude p2pcrypto.PublicKey) {
 	prot.peersMutex.RLock()
-peerLoop:
+	peers := make([]p2pcrypto.PublicKey, 0, len(prot.peers))
 	for p := range prot.peers {
+		peers = append(peers, p)
+	}
+	prot.peersMutex.RUnlock()
+	var wg sync.WaitGroup
+peerLoop:
+	for _, p := range peers {
 		if exclude == p {
 			continue peerLoop
 		}
+		wg.Add(1)
 		go func(pubkey p2pcrypto.PublicKey) {
 			// TODO: replace peer ?
 			err := prot.net.SendMessage(pubkey, nextProt, payload)
 			if err != nil {
 				prot.Warning("Failed sending msg %v to %v, reason=%v", h, pubkey, err)
 			}
-		}(prot.peers[p].pubkey)
+			wg.Done()
+		}(p)
 	}
-	prot.peersMutex.RUnlock()
+	wg.Wait()
 }
 
 // Broadcast is the actual broadcast procedure - process the message internally and loop on peers and add the message to their queues

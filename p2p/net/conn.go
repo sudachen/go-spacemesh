@@ -3,7 +3,7 @@ package net
 import (
 	"errors"
 	"github.com/spacemeshos/go-spacemesh/log"
-	"github.com/spacemeshos/go-spacemesh/p2p/metrics"
+	"github.com/spacemeshos/go-spacemesh/p2p/delimited"
 	"github.com/spacemeshos/go-spacemesh/p2p/p2pcrypto"
 	"time"
 
@@ -13,7 +13,6 @@ import (
 	"sync"
 
 	"github.com/spacemeshos/go-spacemesh/crypto"
-	"github.com/spacemeshos/go-spacemesh/p2p/net/wire"
 )
 
 var (
@@ -59,30 +58,48 @@ type FormattedConnection struct {
 	created    time.Time
 	remotePub  p2pcrypto.PublicKey
 	remoteAddr net.Addr
-	closeChan  chan struct{}
-	formatter  wire.Formatter // format messages in some way
-	networker  networker      // network context
+	networker  networker // network context
 	session    NetworkSession
-	closeOnce  sync.Once
+	deadline   time.Duration
+	timeout    time.Duration
+	r          formattedReader
+	wmtx       sync.Mutex
+	w          formattedWriter
 	closed     bool
+	deadliner  deadliner
+	close      io.Closer
 }
 
 type networker interface {
 	HandlePreSessionIncomingMessage(c Connection, msg []byte) error
 	EnqueueMessage(ime IncomingMessageEvent)
-	SubscribeClosingConnections(func(Connection))
-	publishClosingConnection(c Connection)
+	SubscribeClosingConnections(func(c ConnectionWithErr))
+	publishClosingConnection(c ConnectionWithErr)
 	NetworkID() int8
 }
 
 type readWriteCloseAddresser interface {
 	io.ReadWriteCloser
+	deadliner
 	RemoteAddr() net.Addr
 }
 
+type deadliner interface {
+	SetReadDeadline(t time.Time) error
+	SetWriteDeadline(t time.Time) error
+}
+
+type formattedReader interface {
+	Next() ([]byte, error)
+}
+
+type formattedWriter interface {
+	WriteRecord([]byte) (int, error)
+}
+
 // Create a new connection wrapping a net.Conn with a provided connection manager
-func newConnection(conn readWriteCloseAddresser, netw networker, formatter wire.Formatter,
-	remotePub p2pcrypto.PublicKey, session NetworkSession, log log.Log) *FormattedConnection {
+func newConnection(conn readWriteCloseAddresser, netw networker,
+	remotePub p2pcrypto.PublicKey, session NetworkSession, deadline time.Duration, log log.Log) *FormattedConnection {
 
 	// todo parametrize channel size - hard-coded for now
 	connection := &FormattedConnection{
@@ -91,13 +108,15 @@ func newConnection(conn readWriteCloseAddresser, netw networker, formatter wire.
 		created:    time.Now(),
 		remotePub:  remotePub,
 		remoteAddr: conn.RemoteAddr(),
-		formatter:  formatter,
+		r:          delimited.NewReader(conn),
+		w:          delimited.NewWriter(conn),
+		close:      conn,
+		deadline:   deadline,
+		deadliner:  conn,
 		networker:  netw,
 		session:    session,
-		closeChan:  make(chan struct{}),
 	}
 
-	connection.formatter.Pipe(conn)
 	return connection
 }
 
@@ -140,101 +159,115 @@ func (c *FormattedConnection) publish(message []byte) {
 	c.networker.EnqueueMessage(IncomingMessageEvent{c, message})
 }
 
-// incomingChannel returns the incoming messages channel
-func (c *FormattedConnection) incomingChannel() chan []byte {
-	return c.formatter.In()
-}
-
 // Send binary data to a connection
 // data is copied over so caller can get rid of the data
 // Concurrency: can be called from any go routine
 func (c *FormattedConnection) Send(m []byte) error {
-	err := c.formatter.Out(m)
+	c.wmtx.Lock()
+	c.deadliner.SetReadDeadline(time.Now().Add(c.deadline))
+	if c.closed {
+		c.wmtx.Unlock()
+		return fmt.Errorf("connection was closed")
+	}
+	_, err := c.w.WriteRecord(m)
+	c.wmtx.Unlock()
 	if err != nil {
 		return err
 	}
-	metrics.PeerRecv.With(metrics.PeerIdLabel, c.remotePub.String()).Add(float64(len(m)))
 	return nil
 }
 
 // Close closes the connection (implements io.Closer). It is go safe.
 func (c *FormattedConnection) Close() {
-	c.closeOnce.Do(func() {
-		close(c.closeChan)
-	})
-}
-
-// Closed Reports whether the connection was closed. It is go safe.
-func (c *FormattedConnection) Closed() bool {
-	return c.closed
-}
-
-func (c *FormattedConnection) shutdown(err error) {
-	c.closed = true
-	c.logger.Debug("Shutting down conn with %v err=%v", c.RemotePublicKey().String(), err)
-	if err != ErrConnectionClosed {
-		c.networker.publishClosingConnection(c)
+	c.wmtx.Lock()
+	if c.closed {
+		c.wmtx.Unlock()
+		return
 	}
-	c.formatter.Close()
+	err := c.close.Close()
+	c.closed = true
+	c.wmtx.Unlock()
+	if err != nil {
+		c.logger.Warning("error while closing with connection %v, err: %v", c.RemotePublicKey().String(), err)
+	}
+}
+
+// Closed returns whether the connection is closed
+func (c *FormattedConnection) Closed() bool {
+	c.wmtx.Lock()
+	defer c.wmtx.Unlock()
+	return c.closed
 }
 
 var ErrTriedToSetupExistingConn = errors.New("tried to setup existing connection")
 var ErrIncomingSessionTimeout = errors.New("timeout waiting for handshake message")
 
 func (c *FormattedConnection) setupIncoming(timeout time.Duration) error {
-	var err error
-	tm := time.NewTimer(timeout)
-	select {
-	case msg, ok := <-c.formatter.In():
-		if !ok { // chan closed
-			err = ErrClosedIncomingChannel
-			break
-		}
+	be := make(chan struct {
+		b []byte
+		e error
+	})
 
+	go func() {
+		// TODO: some other way to make sure this groutine closes
+		msg, err := c.r.Next()
+		be <- struct {
+			b []byte
+			e error
+		}{b: msg, e: err}
+	}()
+
+	t := time.NewTimer(timeout)
+
+	select {
+	case msgbe := <-be:
+		msg := msgbe.b
+		err := msgbe.e
+
+		if err != nil {
+			c.Close()
+			return err
+		}
 		if c.session == nil {
 			err = c.networker.HandlePreSessionIncomingMessage(c, msg)
 			if err != nil {
-				break
+				c.Close()
+				return err
 			}
-			return nil
+		} else {
+			c.Close()
+			return errors.New("setup connection twice")
 		}
-		err = ErrTriedToSetupExistingConn
-		break
-	case <-tm.C:
-		err = ErrIncomingSessionTimeout
+	case <-t.C:
+		c.Close()
+		return errors.New("timeout while waiting for session message")
 	}
 
-	c.Close()
-	return err
+	return nil
 }
 
 // Push outgoing message to the connections
 // Read from the incoming new messages and send down the connection
 func (c *FormattedConnection) beginEventProcessing() {
-
 	var err error
-
-Loop:
+	var buf []byte
 	for {
-		select {
-		case msg, ok := <-c.formatter.In():
-			if !ok { // chan closed
-				err = ErrClosedIncomingChannel
-				break Loop
-			}
-
-			if c.session == nil {
-				err = ErrTriedToSetupExistingConn
-				break Loop
-			}
-
-			metrics.PeerRecv.With(metrics.PeerIdLabel, c.remotePub.String()).Add(float64(len(msg)))
-			c.publish(msg)
-
-		case <-c.closeChan:
-			err = ErrConnectionClosed
-			break Loop
+		c.deadliner.SetReadDeadline(time.Now().Add(c.deadline))
+		buf, err = c.r.Next()
+		if err != nil {
+			break
 		}
+
+		if c.session == nil {
+			err = ErrTriedToSetupExistingConn
+			break
+		}
+
+		newbuf := make([]byte, len(buf))
+		copy(newbuf, buf)
+		c.publish(newbuf)
 	}
-	c.shutdown(err)
+
+	c.Close()
+	c.networker.publishClosingConnection(ConnectionWithErr{c, err})
 }
