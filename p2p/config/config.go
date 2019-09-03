@@ -74,7 +74,7 @@ func DefaultConfig() Config {
 		DialTimeout:           duration("1m"),
 		ConnKeepAlive:         duration("48h"),
 		NetworkID:             TestNet,
-		ResponseTimeout:       duration("15s"),
+		ResponseTimeout:       duration("60s"),
 		SessionTimeout:        duration("5s"),
 		MaxPendingConnections: 100,
 		OutboundPeersTarget:   10,

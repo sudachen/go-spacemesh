@@ -347,9 +347,12 @@ func (s *swarm) sendMessageImpl(peerPubKey p2pcrypto.PublicKey, protocol string,
 	}
 
 	final := session.SealMessage(data)
-
+	start := time.Now()
 	err = conn.Send(final)
-
+	dur:=time.Since(start)
+	if dur > 10*time.Second{
+		s.lNode.Info("send took more than 10s: %v",dur)
+	}
 	s.lNode.Debug("DirectMessage sent successfully")
 
 	return err

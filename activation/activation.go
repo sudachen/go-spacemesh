@@ -9,6 +9,7 @@ import (
 	"github.com/spacemeshos/post/shared"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 const AtxProtocol = "AtxGossip"
@@ -409,6 +410,7 @@ func (b *Builder) PublishActivationTx(epoch types.EpochId) error {
 		return tooSoonErr
 	}
 
+	time.Sleep(time.Second*20)
 	// when we reach here an epoch has passed
 	// we've completed the sequential work, now before publishing the atx,
 	// we need to provide number of atx seen in the epoch of the positioning atx.
@@ -461,6 +463,7 @@ func (b *Builder) PublishActivationTx(epoch types.EpochId) error {
 	b.challenge = nil
 	b.posLayerID = 0
 
+	time.Sleep(time.Second*5)
 	err = b.net.Broadcast(AtxProtocol, buf)
 	if err != nil {
 		return err

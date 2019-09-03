@@ -258,6 +258,7 @@ func (s *Syncer) Synchronise() {
 			s.Panic("failed getting layer even though we are weakly-synced currentLayer=%v lastTicked=%v err=%v ", currentSyncLayer, s.lastTickedLayer(), err)
 			return
 		}
+		time.Sleep(time.Second*170)
 		s.lValidator.ValidateLayer(lyr) // wait for layer validation
 		return
 	}
