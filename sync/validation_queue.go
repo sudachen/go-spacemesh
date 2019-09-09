@@ -25,7 +25,7 @@ type blockQueue struct {
 	callbacks     map[interface{}]func(res bool) error
 	depMap        map[interface{}]map[types.Hash32]struct{}
 	reverseDepMap map[types.Hash32][]interface{}
-	visited       map[types.Hash32]struct{}
+	//visited       map[types.Hash32]struct{}
 }
 
 func NewValidationQueue(srvr WorkerInfra, conf Configuration, msh ValidationInfra, checkLocal CheckLocalFunc, lg log.Log) *blockQueue {
@@ -39,8 +39,8 @@ func NewValidationQueue(srvr WorkerInfra, conf Configuration, msh ValidationInfr
 			pending:             make(map[types.Hash32][]chan bool),
 			queue:               make(chan []types.Hash32, 1000),
 		},
-		Configuration:   conf,
-		visited:         make(map[types.Hash32]struct{}),
+		Configuration: conf,
+		//visited:         make(map[types.Hash32]struct{}),
 		depMap:          make(map[interface{}]map[types.Hash32]struct{}),
 		reverseDepMap:   make(map[types.Hash32][]interface{}),
 		callbacks:       make(map[interface{}]func(res bool) error),
@@ -58,10 +58,10 @@ func (vq *blockQueue) inQueue(id types.Hash32) bool {
 		return true
 	}
 
-	_, ok = vq.visited[id]
-	if ok {
-		return true
-	}
+	//_, ok = vq.visited[id]
+	//if ok {
+	//	return true
+	//}
 	return false
 }
 
@@ -84,7 +84,7 @@ func (vq *blockQueue) handleBlock(bjb fetchJob) {
 		}
 
 		vq.Info("fetched  %v", id.String())
-		vq.visited[id] = struct{}{}
+		//vq.visited[id] = struct{}{}
 		if err := vq.fastValidation(block); err != nil {
 			vq.Error("ValidationQueue: block validation failed", log.BlockId(uint64(block.ID())), log.Err(err))
 			vq.updateDependencies(id, false)
@@ -147,7 +147,7 @@ func (vq *blockQueue) updateDependencies(block types.Hash32, valid bool) {
 	//clean after block
 	delete(vq.depMap, block)
 	delete(vq.callbacks, block)
-	delete(vq.visited, block)
+	//delete(vq.visited, block)
 
 	doneQueue := make([]types.Hash32, 0, len(vq.depMap))
 	doneQueue = vq.removefromDepMaps(block, valid, doneQueue)
@@ -169,9 +169,11 @@ func (vq *blockQueue) removefromDepMaps(block types.Hash32, valid bool, doneBloc
 		delete(vq.depMap[dep], block)
 		if len(vq.depMap[dep]) == 0 {
 			delete(vq.depMap, dep)
+
 			vq.Info("run callback for %v, %v", dep, reflect.TypeOf(dep))
 			if callback, ok := vq.callbacks[dep]; ok {
 				delete(vq.callbacks, dep)
+				//delete(vq.visited, block)
 				if err := callback(valid); err != nil {
 					vq.Error(" %v callback Failed", dep)
 					continue
