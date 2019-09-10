@@ -555,41 +555,41 @@ func (app *SpacemeshApp) getIdentityFile() (string, error) {
 
 func (app *SpacemeshApp) Start(cmd *cobra.Command, args []string) {
 	log.Event().Info("Starting Spacemesh")
-	if app.Config.MemProfile != "" {
-		log.Info("Starting mem profiling")
-		f, err := os.Create(app.Config.MemProfile)
-		if err != nil {
-			log.Error("could not create memory profile: ", err)
-		}
-		defer f.Close()
-		runtime.GC() // get up-to-date statistics
-		if err := pprof.WriteHeapProfile(f); err != nil {
-			log.Error("could not write memory profile: ", err)
-		}
+	//if app.Config.MemProfile != "" {
+	log.Info("Starting mem profiling")
+	f, err := os.Create(app.Config.MemProfile)
+	if err != nil {
+		log.Error("could not create memory profile: ", err)
 	}
+	defer f.Close()
+	runtime.GC() // get up-to-date statistics
+	if err := pprof.WriteHeapProfile(f); err != nil {
+		log.Error("could not write memory profile: ", err)
+	}
+	//}
 
-	if app.Config.CpuProfile != "" {
-		log.Info("Starting cpu profile")
-		f, err := os.Create(app.Config.CpuProfile)
-		if err != nil {
-			log.Error("could not create CPU profile: ", err)
-		}
-		defer f.Close()
-		if err := pprof.StartCPUProfile(f); err != nil {
-			log.Error("could not start CPU profile: ", err)
-		}
-		defer pprof.StopCPUProfile()
+	//if app.Config.CpuProfile != "" {
+	log.Info("Starting cpu profile")
+	f, err = os.Create(app.Config.CpuProfile)
+	if err != nil {
+		log.Error("could not create CPU profile: ", err)
 	}
+	defer f.Close()
+	if err := pprof.StartCPUProfile(f); err != nil {
+		log.Error("could not start CPU profile: ", err)
+	}
+	defer pprof.StopCPUProfile()
+	//}
 
-	if app.Config.PprofHttpServer {
-		log.Info("Starting pprof server")
-		go func() {
-			err := http.ListenAndServe(":6060", nil)
-			if err != nil {
-				log.Error("cannot start http server", err)
-			}
-		}()
-	}
+	//if app.Config.PprofHttpServer {
+	log.Info("Starting pprof server")
+	go func() {
+		err := http.ListenAndServe(":6060", nil)
+		if err != nil {
+			log.Error("cannot start http server", err)
+		}
+	}()
+	//}
 
 	// start p2p services
 	log.Info("Initializing P2P services")

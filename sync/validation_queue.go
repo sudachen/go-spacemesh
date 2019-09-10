@@ -28,7 +28,7 @@ type blockQueue struct {
 	visited       map[types.Hash32]struct{}
 }
 
-func NewValidationQueue(srvr WorkerInfra, conf Configuration, msh ValidationInfra, checkLocal CheckLocalFunc, lg log.Log) *blockQueue {
+func NewValidationQueue(srvr WorkerInfra, conf Configuration, msh ValidationInfra, checkLocal CheckLocalFunc) *blockQueue {
 	vq := &blockQueue{
 		fetchQueue: fetchQueue{
 			Log:                 srvr.WithName("blockFetchQueue"),
@@ -77,18 +77,18 @@ func (vq *blockQueue) handleBlock(bjb fetchJob) {
 	for _, id := range bjb.ids {
 
 		block, found := mp[id]
-		if !found {
+		if !found || block == nil {
 			vq.updateDependencies(id, false)
-			vq.Error(fmt.Sprintf("could not retrieve a block in view "))
+			vq.Error(fmt.Sprintf("could not retrieve a block in waiting list %v", id.ShortString()))
 			continue
 		}
 
 		vq.Info("fetched  %v", id.String())
 		vq.visited[id] = struct{}{}
 		if err := vq.fastValidation(block); err != nil {
-			vq.Error("ValidationQueue: block validation failed", log.BlockId(uint64(block.ID())), log.Err(err))
+			vq.Error("ValidationQueue: block validation failed %v %v", id.ShortString(), log.Err(err))
 			vq.updateDependencies(id, false)
-			return
+			continue
 		}
 
 		vq.handleBlockDependencies(block)
@@ -100,7 +100,7 @@ func (vq *blockQueue) handleBlock(bjb fetchJob) {
 // handles new block dependencies
 // if there are unknown blocks in the view they are added to the fetch queue
 func (vq *blockQueue) handleBlockDependencies(blk *types.Block) {
-	vq.Info("handle dependencies view Block %v", blk.ID())
+	vq.Info("handle dependencies view Block %v", blk.ShortString())
 	res, err := vq.addDependencies(blk.ID(), blk.ViewEdges, vq.finishBlockCallback(blk))
 
 	if err != nil {
@@ -109,7 +109,7 @@ func (vq *blockQueue) handleBlockDependencies(blk *types.Block) {
 	}
 
 	if res == false {
-		vq.Info("pending done for %v", blk.ID())
+		vq.Info("pending done for %v", blk.ShortString())
 		vq.updateDependencies(blk.Hash32(), true)
 	}
 }
@@ -151,13 +151,14 @@ func (vq *blockQueue) updateDependencies(block types.Hash32, valid bool) {
 
 	doneQueue := make([]types.Hash32, 0, len(vq.depMap))
 	doneQueue = vq.removefromDepMaps(block, valid, doneQueue)
+	var id types.Hash32
 	for {
 		if len(doneQueue) == 0 {
 			break
 		}
-		block = doneQueue[0]
+		id = doneQueue[0]
 		doneQueue = doneQueue[1:]
-		doneQueue = vq.removefromDepMaps(block, valid, doneQueue)
+		doneQueue = vq.removefromDepMaps(id, valid, doneQueue)
 	}
 }
 
@@ -169,7 +170,7 @@ func (vq *blockQueue) removefromDepMaps(block types.Hash32, valid bool, doneBloc
 		delete(vq.depMap[dep], block)
 		if len(vq.depMap[dep]) == 0 {
 			delete(vq.depMap, dep)
-			vq.Info("run callback for %v, %v", dep, reflect.TypeOf(dep))
+			vq.Debug("run callback for %v, %v", dep, reflect.TypeOf(dep))
 			if callback, ok := vq.callbacks[dep]; ok {
 				delete(vq.callbacks, dep)
 				if err := callback(valid); err != nil {
@@ -196,14 +197,14 @@ func (vq *blockQueue) addDependencies(jobId interface{}, blks []types.BlockID, f
 		bid := id.AsHash32()
 		if vq.inQueue(bid) {
 			vq.reverseDepMap[bid] = append(vq.reverseDepMap[bid], jobId)
-			vq.Info("add block %v to %v pending map", id, jobId)
+			vq.Debug("add block %v to %v pending map", id, jobId, reflect.TypeOf(jobId))
 			dependencys[bid] = struct{}{}
 		} else {
 			//	check database
 			if _, err := vq.GetBlock(id); err != nil {
 				//unknown block add to queue
 				vq.reverseDepMap[bid] = append(vq.reverseDepMap[bid], jobId)
-				vq.Info("add block %v to %v pending map", id, jobId)
+				vq.Debug("add block %v to %v pending map", id, jobId, reflect.TypeOf(jobId))
 				dependencys[bid] = struct{}{}
 				idsToPush = append(idsToPush, id.AsHash32())
 			}
@@ -211,14 +212,14 @@ func (vq *blockQueue) addDependencies(jobId interface{}, blks []types.BlockID, f
 	}
 	vq.Unlock()
 
-	if len(idsToPush) > 0 {
-		vq.Debug("add %v to queue %v", len(idsToPush), jobId)
-		vq.addToPending(idsToPush)
-	}
-
 	//todo better this is a little hacky
 	if len(dependencys) == 0 {
 		return false, finishCallback(true)
+	}
+
+	if len(idsToPush) > 0 {
+		vq.Info("add %v to block queue %v", len(idsToPush), jobId)
+		vq.addToPending(idsToPush)
 	}
 
 	vq.depMap[jobId] = dependencys

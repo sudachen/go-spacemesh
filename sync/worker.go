@@ -165,12 +165,14 @@ func NewFetchWorker(s WorkerInfra, count int, reqFactory BatchRequestFactory, id
 						retrived = true
 						lg.Info("Peer: %v responded to fetch request %s", peer.String(), idsStr)
 						output <- fetchJob{ids: ids, items: v}
+						lg.Info("fed to chan %s", peer.String(), idsStr)
 						break next
 					}
 					lg.Info("next peer")
 				}
 			}
 			if !retrived {
+				lg.Info("failed to fetch %v", idsStr)
 				output <- fetchJob{ids: ids, items: nil}
 			}
 		}

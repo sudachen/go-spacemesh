@@ -1,7 +1,6 @@
 package sync
 
 import (
-	"encoding/hex"
 	"fmt"
 	"github.com/spacemeshos/go-spacemesh/common/types"
 	"github.com/spacemeshos/go-spacemesh/common/util"
@@ -97,7 +96,7 @@ func newTxsRequestHandler(s *Syncer, logger log.Log) func(msg []byte) []byte {
 			if tx, err := s.txpool.Get(t); err == nil {
 				txs[t] = &tx
 			} else {
-				logger.Error("Error handling tx request message, for id: %v", hex.EncodeToString(t[:]))
+				logger.Error("Error handling tx request message, for id: %v", t.ShortString())
 			}
 		}
 
@@ -113,7 +112,7 @@ func newTxsRequestHandler(s *Syncer, logger log.Log) func(msg []byte) []byte {
 			return nil
 		}
 
-		logger.Info("send tx response ")
+		logger.Info("send tx response ", log.String("atx_ids", fmt.Sprintf("%x", txids)))
 		return bbytes
 	}
 }

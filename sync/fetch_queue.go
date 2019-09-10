@@ -52,7 +52,7 @@ func concatShortIds(items []types.Hash32) string {
 func (fq *fetchQueue) work() error {
 	output := fetchWithFactory(NewFetchWorker(fq.workerInfra, 1, fq.BatchRequestFactory, fq.queue))
 	for out := range output {
-		fq.Debug("new batch out of queue")
+		fq.Info("new batch out of queue")
 		if out == nil {
 			fq.Info("close queue")
 			return nil
@@ -73,9 +73,9 @@ func (fq *fetchQueue) work() error {
 			continue
 		}
 
-		fq.Debug("fetched items %s", concatShortIds(bjb.ids))
+		fq.Info("fetched items %s", concatShortIds(bjb.ids))
 		fq.handleFetch(bjb)
-		fq.Debug("next batch")
+		fq.Info("next batch")
 	}
 	return nil
 }
@@ -98,7 +98,11 @@ func (fq *fetchQueue) addToPending(ids []types.Hash32) []chan bool {
 		fq.pending[id] = append(fq.pending[id], ch)
 	}
 	fq.Unlock()
-	fq.queue <- idsToAdd
+
+	if len(idsToAdd) > 0 {
+		fq.queue <- idsToAdd
+	}
+
 	return deps
 }
 

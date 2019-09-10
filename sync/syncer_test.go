@@ -18,10 +18,12 @@ import (
 	"github.com/spacemeshos/go-spacemesh/rand"
 	"github.com/spacemeshos/go-spacemesh/signing"
 	"github.com/spacemeshos/go-spacemesh/timesync"
+	"github.com/spacemeshos/go-spacemesh/tortoise"
 	"github.com/spacemeshos/sha256-simd"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"math"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -1432,4 +1434,163 @@ func TestSyncer_AtxSetID(t *testing.T) {
 	assert.Equal(t, b.ActivationTxHeader.NIPSTChallenge, a.ActivationTxHeader.NIPSTChallenge)
 	b.CalcAndSetId()
 	assert.Equal(t, a.ShortString(), b.ShortString())
+}
+
+var proof []byte
+
+func TestSyncer_stress(t *testing.T) {
+	id := Path
+	layerSize := 50
+	lg1 := log.New("sync1", "", "")
+	lg2 := log.New("sync2", "", "")
+	mshdb, _ := mesh.NewPersistentMeshDB(id, lg1.WithOptions(log.Nop))
+	nipstStore, _ := database.NewLDBDatabase(id+"nipst", 0, 0, lg1.WithOptions(log.Nop))
+	defer nipstStore.Close()
+	atxdbStore, _ := database.NewLDBDatabase(id+"atx", 0, 0, lg1.WithOptions(log.Nop))
+	defer atxdbStore.Close()
+	atxdb := activation.NewActivationDb(atxdbStore, &MockIStore{}, mshdb, uint16(1000), &ValidatorMock{}, lg1.WithOptions(log.Nop))
+	trtl := tortoise.NewAlgorithm(int(layerSize), mshdb, 5, lg1)
+	msh := mesh.NewMesh(mshdb, atxdb, rewardConf, trtl, &MockTxMemPool{}, &MockAtxMemPool{}, &stateMock{}, lg1.WithOptions(log.Nop))
+	poetDbStore, err := database.NewLDBDatabase(id+"poet", 0, 0, lg1.WithOptions(log.Nop))
+	if err != nil {
+		lg1.Error("error: ", err)
+		return
+	}
+
+	poetDb := activation.NewPoetDb(poetDbStore, lg1.WithOptions(log.Nop))
+	proofMessage := makePoetProofMessage(t)
+	proof, _ = proofMessage.Ref()
+	if err := poetDb.ValidateAndStore(&proofMessage); err != nil {
+		t.Error(err)
+	}
+
+	poetDb.ValidateAndStore(&proofMessage)
+	layers := 200
+	createBaseline(msh, layers, layerSize, layerSize, 0, 0)
+
+	sim := service.NewSimulator()
+	clock := MockClock{}
+	clock.Layer = types.LayerID(layers + 1)
+	blockValidator := BlockEligibilityValidatorMock{}
+	txpool := miner.NewTypesTransactionIdMemPool()
+	atxpool := miner.NewTypesAtxIdMemPool()
+
+	node1 := sim.NewNode()
+	node2 := sim.NewNode()
+	sync1 := NewSync(node1, msh, txpool, atxpool, mockTxProcessor{}, blockValidator, poetDb, conf, &clock, lg1)
+	trtl2 := tortoise.NewAlgorithm(int(layerSize), mshdb, 5, lg2)
+	ms := mesh.NewMesh(mesh.NewMemMeshDB(lg2), activation.NewActivationDb(database.NewMemDatabase(), &MockIStore{}, mshdb, 10, &ValidatorMock{}, lg2),
+		rewardConf, trtl2, &MockTxMemPool{}, &MockAtxMemPool{}, &stateMock{}, lg2)
+
+	sync2 := NewSync(node2, ms, txpool, atxpool, mockTxProcessor{}, blockValidator, poetDb, conf, &clock, lg2)
+	sync2.Peers = getPeersMock([]p2p.Peer{node1.PublicKey()})
+	sync2.Start()
+	for {
+		clock.Tick()
+		log.Info("wait %v", sync1.ValidatedLayer())
+		if int(sync2.ValidatedLayer()) == layers {
+			return
+		}
+		time.Sleep(1 * time.Second)
+	}
+
+}
+
+func txs(num int) ([]*types.AddressableSignedTransaction, []types.TransactionId) {
+	txs := make([]*types.AddressableSignedTransaction, 0, num)
+	ids := make([]types.TransactionId, 0, num)
+	for i := 0; i < num; i++ {
+		tx := tx()
+		txs = append(txs, tx)
+		ids = append(ids, types.GetTransactionId(tx.SerializableSignedTransaction))
+	}
+	return txs, ids
+}
+
+func atxs(num int) ([]*types.ActivationTx, []types.AtxId) {
+	atxs := make([]*types.ActivationTx, 0, num)
+	ids := make([]types.AtxId, 0, num)
+	for i := 0; i < num; i++ {
+		coinbase := types.HexToAddress("aaaa")
+		chlng := types.HexToHash32("0x3333")
+		poetRef := proof
+		npst := nipst.NewNIPSTWithChallenge(&chlng, poetRef)
+		atx := types.NewActivationTx(types.NodeId{Key: RandStringRunes(8), VRFPublicKey: []byte(RandStringRunes(8))}, coinbase, 0, *types.EmptyAtxId, 5, 1, *types.EmptyAtxId, 0, []types.BlockID{1, 2, 3}, npst)
+		atx.Commitment = commitment
+		atx.CommitmentMerkleRoot = commitment.MerkleRoot
+		atx.CalcAndSetId()
+		atxs = append(atxs, atx)
+		ids = append(ids, atx.Id())
+	}
+	return atxs, ids
+}
+
+func createBaseline(msh *mesh.Mesh, layers int, layerSize int, patternSize int, txPerBlock int, atxPerBlock int) {
+	lg := log.New("tortoise_test", "", "")
+	l1 := mesh.GenesisLayer()
+	msh.AddBlockWithTxs(l1.Blocks()[0], nil, nil)
+	var lyrs []*types.Layer
+	lyrs = append(lyrs, l1)
+	l := createLayerWithRandVoting(msh, 1, []*types.Layer{l1}, layerSize, 1, txPerBlock, atxPerBlock)
+
+	lyrs = append(lyrs, l)
+	for i := 0; i < layers-1; i++ {
+		lg.Info("!!-------------------------new layer %v-------------------------!!!!", i)
+		lyr := createLayerWithRandVoting(msh, l.Index()+1, []*types.Layer{l}, layerSize, patternSize, txPerBlock, atxPerBlock)
+		start := time.Now()
+		lyrs = append(lyrs, lyr)
+		lg.Debug("Time inserting layer into db: %v ", time.Since(start))
+		l = lyr
+	}
+
+}
+
+func createLayerWithRandVoting(msh *mesh.Mesh, index types.LayerID, prev []*types.Layer, blocksInLayer int, patternSize int, txPerBlock int, atxPerBlock int) *types.Layer {
+	l := types.NewLayer(index)
+	var patterns [][]int
+	for _, l := range prev {
+		blocks := l.Blocks()
+		blocksInPrevLayer := len(blocks)
+		patterns = append(patterns, chooseRandomPattern(blocksInPrevLayer, int(math.Min(float64(blocksInPrevLayer), float64(patternSize)))))
+	}
+	layerBlocks := make([]types.BlockID, 0, blocksInLayer)
+	for i := 0; i < blocksInLayer; i++ {
+		bl := types.NewExistingBlock(types.BlockID(uuid.New().ID()), index, []byte("data data data"))
+		signer := signing.NewEdSigner()
+		bl.Signature = signer.Sign(bl.Bytes())
+		layerBlocks = append(layerBlocks, bl.ID())
+		for idx, pat := range patterns {
+			for _, id := range pat {
+				b := prev[idx].Blocks()[id]
+				bl.AddVote(types.BlockID(b.ID()))
+			}
+		}
+		for _, prevBloc := range prev[0].Blocks() {
+			bl.AddView(types.BlockID(prevBloc.ID()))
+		}
+
+		//add txs
+		txs, txids := txs(txPerBlock)
+		//add atxs
+		atxs, atxids := atxs(atxPerBlock)
+
+		bl.TxIds = txids
+		bl.AtxIds = atxids
+
+		msh.AddBlockWithTxs(bl, txs, atxs)
+		l.AddBlock(bl)
+
+	}
+	log.Debug("Created mesh.LayerID %d with blocks %d", l.Index(), layerBlocks)
+	return l
+}
+
+func chooseRandomPattern(blocksInLayer int, patternSize int) []int {
+	rand.Seed(time.Now().UnixNano())
+	p := rand.Perm(blocksInLayer)
+	indexes := make([]int, 0, patternSize)
+	for _, r := range p[:patternSize] {
+		indexes = append(indexes, r)
+	}
+	return indexes
 }

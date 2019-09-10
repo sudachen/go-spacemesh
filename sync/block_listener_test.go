@@ -519,6 +519,7 @@ func TestBlockListener_TraverseViewBadFlow(t *testing.T) {
 	bl1.AddBlock(block3)
 	bl1.AddBlock(block4)
 	bl1.AddBlock(block5)
+	bl1.AddBlock(block6)
 
 	go bl2.syncLayer(5, []types.BlockID{block5.Id, block6.Id})
 	time.Sleep(1 * time.Second) //wait for fetch

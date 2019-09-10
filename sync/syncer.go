@@ -236,7 +236,7 @@ func NewSync(srv service.Service, layers *mesh.Mesh, txpool TxMemPool, atxpool A
 		p2pSynced:            false,
 	}
 
-	s.blockQueue = NewValidationQueue(srvr, s.Configuration, s, s.blockCheckLocal, logger.WithName("validQ"))
+	s.blockQueue = NewValidationQueue(srvr, s.Configuration, s, s.blockCheckLocal)
 	s.txQueue = NewTxQueue(s, sv)
 	s.atxQueue = NewAtxQueue(s, s.FetchPoetProof)
 
@@ -392,7 +392,7 @@ func (s *Syncer) getLayerFromNeighbors(currenSyncLayer types.LayerID) (*types.La
 
 	blocksArr, err := s.syncLayer(currenSyncLayer, blockIds)
 	if len(blocksArr) == 0 || err != nil {
-		return nil, fmt.Errorf("could get blocks for layer  %v", currenSyncLayer)
+		return nil, fmt.Errorf("could not get blocks for layer  %v", currenSyncLayer)
 	}
 
 	return types.NewExistingLayer(types.LayerID(currenSyncLayer), blocksArr), nil
@@ -579,8 +579,9 @@ func (s *Syncer) fetchLayerBlockIds(m map[types.Hash32][]p2p.Peer, lyr types.Lay
 						s.With().Error("Peer: got invalid layer ids", log.String("peer", peer.String()), log.Err(err))
 						break
 					}
+
 					if h != res {
-						s.Error("Peer: %v layer ids hash does not match request", peer)
+						s.Error("Peer: %v layer ids hash does not match request ", peer, log.LayerId(uint64(lyr)))
 						break
 					}
 
@@ -627,7 +628,7 @@ func (s *Syncer) fetchLayerHashes(lyr types.LayerID) (map[types.Hash32][]p2p.Pee
 }
 
 func fetchWithFactory(wrk worker) chan interface{} {
-	// each worker goroutine tries to fetch a block iteratively from each peer
+	// each worker goroutine tries to fetch an item iteratively from each peer
 	go wrk.Work()
 	for i := 0; int32(i) < *wrk.workCount-1; i++ {
 		cloneWrk := wrk.Clone()
