@@ -1,7 +1,9 @@
 package mesh
 
 import (
+	"bytes"
 	"container/list"
+	"encoding/gob"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -18,18 +20,20 @@ type layerMutex struct {
 
 type MeshDB struct {
 	log.Log
+	general            database.DB
 	blockCache         blockCache
 	layers             database.DB
 	blocks             database.DB
 	transactions       database.Database
 	contextualValidity database.DB //map blockId to contextualValidation state of block
-	patterns           database.DB //map blockId to contextualValidation state of block
+	patterns           database.DB
 	orphanBlocks       map[types.LayerID]map[types.BlockID]struct{}
 	layerMutex         map[types.LayerID]*layerMutex
 	lhMutex            sync.Mutex
 }
 
 func NewPersistentMeshDB(path string, log log.Log) (*MeshDB, error) {
+	gdb := database.NewLevelDbStore(path+"general", nil, nil)
 	bdb := database.NewLevelDbStore(path+"blocks", nil, nil)
 	ldb := database.NewLevelDbStore(path+"layers", nil, nil)
 	vdb := database.NewLevelDbStore(path+"validity", nil, nil)
@@ -41,6 +45,7 @@ func NewPersistentMeshDB(path string, log log.Log) (*MeshDB, error) {
 	ll := &MeshDB{
 		Log:                log,
 		blockCache:         NewBlockCache(100 * layerSize),
+		general:            gdb,
 		blocks:             bdb,
 		layers:             ldb,
 		transactions:       tdb,
@@ -61,6 +66,7 @@ func NewMemMeshDB(log log.Log) *MeshDB {
 		contextualValidity: database.NewMemDatabase(),
 		transactions:       database.NewMemDatabase(),
 		patterns:           database.NewMemDatabase(),
+		general:            database.NewMemDatabase(),
 		orphanBlocks:       make(map[types.LayerID]map[types.BlockID]struct{}),
 		layerMutex:         make(map[types.LayerID]*layerMutex),
 	}
@@ -393,4 +399,34 @@ func (m *MeshDB) ContextuallyValidBlock(layer types.LayerID) (map[types.BlockID]
 	}
 
 	return validBlks, nil
+}
+
+func (m *MeshDB) Persist(key []byte, v interface{}) error {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	err := enc.Encode(v)
+	if err != nil {
+		panic(err)
+	}
+	return m.general.Put(key, buf.Bytes())
+}
+
+func (m *MeshDB) Retrieve(key []byte, v interface{}) interface{} {
+	val, err := m.general.Get(key)
+	if err != nil {
+		m.Warning("failed retrieving object from db ", err)
+		return nil
+	}
+
+	if val == nil {
+		m.Info("no such value in database db ", err)
+	}
+
+	dec := gob.NewDecoder(bytes.NewBuffer(val))
+
+	if err := dec.Decode(v); err != nil {
+		m.Error("failed decoding object from db ", err)
+	}
+
+	return v
 }

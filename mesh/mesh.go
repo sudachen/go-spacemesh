@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/spacemeshos/go-spacemesh/common/types"
+	"github.com/spacemeshos/go-spacemesh/common/util"
 	"github.com/spacemeshos/go-spacemesh/crypto/sha3"
 	"github.com/spacemeshos/go-spacemesh/events"
 	"github.com/spacemeshos/go-spacemesh/log"
@@ -22,6 +23,9 @@ const (
 
 var TRUE = []byte{1}
 var FALSE = []byte{0}
+var LATEST = []byte("latest")
+var VALIDATED = []byte("validated")
+var TORTOISE = []byte("tortoise")
 
 type MeshValidator interface {
 	HandleIncomingLayer(layer *types.Layer) (types.LayerID, types.LayerID)
@@ -81,6 +85,14 @@ func NewMesh(db *MeshDB, atxDb AtxDB, rewardConfig Config, mesh MeshValidator, t
 		MeshDB:         db,
 		config:         rewardConfig,
 		AtxDB:          atxDb,
+	}
+
+	if latest, err := db.general.Get(LATEST); err == nil {
+		ll.latestLayer = types.LayerID(util.BytesToUint64(latest))
+	}
+
+	if validated, err := db.general.Get(VALIDATED); err == nil {
+		ll.validatedLayer = types.LayerID(util.BytesToUint64(validated))
 	}
 
 	return ll
@@ -160,6 +172,9 @@ func (m *Mesh) SetLatestLayer(idx types.LayerID) {
 	if idx > m.latestLayer {
 		m.Info("set latest known layer to %v", idx)
 		m.latestLayer = idx
+		if err := m.general.Put(LATEST, idx.ToBytes()); err != nil {
+			m.Panic("could persist validated layer index")
+		}
 	}
 }
 
@@ -186,6 +201,9 @@ func (m *Mesh) ValidateLayer(lyr *types.Layer) {
 	oldPbase, newPbase := m.HandleIncomingLayer(lyr)
 	m.lvMutex.Lock()
 	m.validatedLayer = lyr.Index()
+	if err := m.general.Put(VALIDATED, lyr.Index().ToBytes()); err != nil {
+		m.Panic("could persist validated layer index")
+	}
 	m.lvMutex.Unlock()
 
 	if newPbase > oldPbase {
