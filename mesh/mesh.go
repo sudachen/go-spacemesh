@@ -88,10 +88,12 @@ func NewMesh(db *MeshDB, atxDb AtxDB, rewardConfig Config, mesh MeshValidator, t
 	}
 
 	if latest, err := db.general.Get(LATEST); err == nil {
+		logger.Warning("could not recover latest layer")
 		ll.latestLayer = types.LayerID(util.BytesToUint64(latest))
 	}
 
 	if validated, err := db.general.Get(VALIDATED); err == nil {
+		logger.Warning("could not recover  validated layer")
 		ll.validatedLayer = types.LayerID(util.BytesToUint64(validated))
 	}
 
