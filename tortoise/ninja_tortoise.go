@@ -136,7 +136,6 @@ func NewNinjaTortoise(layerSize int, blocks Mesh, hdist int, log log.Log) *Ninja
 }
 
 func (ni *NinjaTortoise) PersistTortoise() error {
-	println("fuuuuuuuuuck")
 	return ni.Persist(mesh.TORTOISE, ni.ninjaTortoise)
 }
 
