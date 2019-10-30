@@ -242,12 +242,13 @@ func (o *Oracle) actives(layer types.LayerID) (map[string]struct{}, error) {
 
 	// no contextually valid blocks
 	if len(mp) == 0 {
-		o.Error("Could not calculate hare active set size: no contextually valid blocks",
+		o.With().Error("Could not calculate hare active set size: no contextually valid blocks",
 			log.Uint64("layer_id", uint64(layer)), log.Uint64("epoch_id", uint64(layer.GetEpoch(o.layersPerEpoch))),
 			log.Uint64("safe_layer_id", uint64(sl)), log.Uint64("safe_epoch_id", uint64(safeEp)))
 		return nil, errNoContextualBlocks
 	}
 
+	o.With().Info("actives: calling getActiveSet")
 	activeMap, err := o.getActiveSet(safeEp, mp)
 	if err != nil {
 		o.With().Error("Could not retrieve active set size", log.Err(err),

@@ -9,8 +9,10 @@ import (
 	"github.com/spacemeshos/go-spacemesh/database"
 	"github.com/spacemeshos/go-spacemesh/log"
 	"github.com/spacemeshos/go-spacemesh/mesh"
+	"github.com/spacemeshos/go-spacemesh/rand"
 	"github.com/spacemeshos/go-spacemesh/signing"
 	"sync"
+	"time"
 )
 
 const topAtxKey = "topAtxKey"
@@ -144,8 +146,14 @@ func (db *ActivationDb) createTraversalActiveSetCounterFunc(countedAtxs map[stri
 
 // CalcActiveSetSize - returns the active set size that matches the view of the contextually valid blocks in the provided layer
 func (db *ActivationDb) CalcActiveSetSize(epoch types.EpochId, blocks map[types.BlockID]struct{}) (map[string]struct{}, error) {
+	startTime := time.Now()
+	callId := rand.Int()
+	db.log.With().Info("start calculating active set size", log.EpochId(uint64(epoch)), log.Int("blocks_count", len(blocks)), log.Int("call_id", callId))
 
 	if epoch == 0 {
+		db.log.With().Info("err calculating active set size", log.EpochId(uint64(epoch)),
+			log.Int("blocks_count", len(blocks)), log.Int("call_id", callId),
+			log.String("duration", time.Now().Sub(startTime).String()))
 		return nil, errors.New("tried to retrieve active set for epoch 0")
 	}
 
@@ -158,6 +166,9 @@ func (db *ActivationDb) CalcActiveSetSize(epoch types.EpochId, blocks map[types.
 
 	err := db.meshDb.ForBlockInView(blocks, firstLayerOfPrevEpoch, traversalFunc)
 	if err != nil {
+		db.log.With().Info("err calculating active set size", log.EpochId(uint64(epoch)),
+			log.Int("blocks_count", len(blocks)), log.Int("call_id", callId),
+			log.String("duration", time.Now().Sub(startTime).String()), log.Err(err))
 		return nil, err
 	}
 
@@ -166,6 +177,9 @@ func (db *ActivationDb) CalcActiveSetSize(epoch types.EpochId, blocks map[types.
 		result[k] = struct{}{}
 	}
 
+	db.log.With().Info("done calculating active set size", log.EpochId(uint64(epoch)),
+		log.Int("blocks_count", len(blocks)), log.Int("call_id", callId),
+		log.String("duration", time.Now().Sub(startTime).String()))
 	return result, nil
 }
 
@@ -213,6 +227,8 @@ func (db *ActivationDb) CalcActiveSetFromView(view []types.BlockID, pubEpoch typ
 // - ATX LayerID is NipstLayerTime or less after the PositioningATX LayerID.
 // - The ATX view of the previous epoch contains ActiveSetSize activations.
 func (db *ActivationDb) SyntacticallyValidateAtx(atx *types.ActivationTx) error {
+	startTime := time.Now()
+
 	pub, err := types.ExtractPublicKey(atx)
 	if err != nil {
 		return fmt.Errorf("cannot validate atx sig atx id %v err %v", atx.ShortString(), err)
@@ -310,6 +326,7 @@ func (db *ActivationDb) SyntacticallyValidateAtx(atx *types.ActivationTx) error 
 		return fmt.Errorf("NIPST not valid: %v", err)
 	}
 
+	db.log.With().Info("done atx syntax validation", log.String("duration", time.Now().Sub(startTime).String()))
 	return nil
 }
 
