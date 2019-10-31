@@ -5,6 +5,7 @@ import (
 	"github.com/spacemeshos/go-spacemesh/common/types"
 	"github.com/spacemeshos/go-spacemesh/log"
 	"github.com/spacemeshos/go-spacemesh/signing"
+	"time"
 )
 
 type messageValidator interface {
@@ -31,6 +32,8 @@ func newEligibilityValidator(oracle Rolacle, layersPerEpoch uint16, idProvider i
 
 // check eligibility of the provided message by the oracle.
 func (ev *eligibilityValidator) validateRole(m *Msg) (bool, error) {
+	startTime := time.Now()
+
 	if m == nil {
 		ev.Error("Eligibility validator: called with nil")
 		return false, errors.New("fatal: nil message")
@@ -63,6 +66,8 @@ func (ev *eligibilityValidator) validateRole(m *Msg) (bool, error) {
 		ev.With().Error("Eligibility validator: sender is not eligible to participate", log.String("sender_pub", pub.ShortString()))
 		return false, nil
 	}
+
+	ev.Info("done validating role duration is %v", time.Now().Sub(startTime).String())
 
 	return true, nil
 }

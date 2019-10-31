@@ -103,6 +103,8 @@ func (m *Msg) Bytes() []byte {
 // The full message consists of the original message and the extracted public key.
 // An extracted public key is considered valid if it represents an active identity for a consensus view.
 func newMsg(hareMsg *Message, querier StateQuerier, layersPerEpoch uint16) (*Msg, error) {
+	startTime := time.Now()
+
 	// extract pub key
 	pubKey, err := ed25519.ExtractPublicKey(hareMsg.InnerMsg.Bytes(), hareMsg.Sig)
 	if err != nil {
@@ -122,6 +124,8 @@ func newMsg(hareMsg *Message, querier StateQuerier, layersPerEpoch uint16) (*Msg
 		log.Error("identity %v is not active", pub.ShortString())
 		return nil, errors.New("inactive identity")
 	}
+
+	log.Info("done creating new message in %v", time.Now().Sub(startTime).String())
 
 	return &Msg{hareMsg, pub}, nil
 }
@@ -365,7 +369,8 @@ func (proc *ConsensusProcess) handleMessage(m *Msg) {
 
 // process the message by its type
 func (proc *ConsensusProcess) processMsg(m *Msg) {
-	proc.Debug("Processing message of type %v", m.InnerMsg.Type.String())
+	proc.Info("Processing message of type %v for layer %v", m.InnerMsg.Type.String(), proc.instanceId)
+
 	metrics.MessageTypeCounter.With("type_id", m.InnerMsg.Type.String()).Add(1)
 
 	switch m.InnerMsg.Type {
