@@ -550,7 +550,7 @@ func (s *Syncer) DataAvailability(blk *types.Block) ([]*types.Transaction, []*ty
 		return nil, nil, fmt.Errorf("failed fetching block %v activation transactions %v", blk.ID(), atxerr)
 	}
 
-	s.Info("fetched all block data %v", blk.ID())
+	//s.Info("fetched all block data %v", blk.ID())
 	return txres, atxres, nil
 }
 

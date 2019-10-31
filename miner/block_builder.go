@@ -221,8 +221,8 @@ func (t *BlockBuilder) createBlock(id types.LayerID, atxID types.AtxId, eligibil
 		TxIds:  txids,
 	}
 
-	t.Log.Event().Info(fmt.Sprintf("I've created a block in layer %v. id: %v, num of transactions: %v, votes: %d, viewEdges: %d atx %v, atxs:%v",
-		b.LayerIndex, b.ID(), len(b.TxIds), len(b.BlockVotes), len(b.ViewEdges), b.ATXID.ShortString(), len(b.AtxIds)))
+	//t.Log.Event().Info(fmt.Sprintf("I've created a block in layer %v. id: %v, num of transactions: %v, votes: %d, viewEdges: %d atx %v, atxs:%v",
+	//	b.LayerIndex, b.ID(), len(b.TxIds), len(b.BlockVotes), len(b.ViewEdges), b.ATXID.ShortString(), len(b.AtxIds)))
 
 	blockBytes, err := types.InterfaceToBytes(b)
 	if err != nil {
@@ -285,7 +285,7 @@ func (t *BlockBuilder) listenForTx() {
 				t.With().Error("nonce and balance validation failed", log.TxId(tx.Id().ShortString()), log.Err(err))
 				continue
 			}
-			t.Log.With().Info("got new tx", log.TxId(tx.Id().ShortString()))
+			//t.Log.With().Info("got new tx", log.TxId(tx.Id().ShortString()))
 			data.ReportValidation(IncomingTxProtocol)
 			t.TransactionPool.Put(tx.Id(), tx)
 		}
@@ -354,7 +354,7 @@ func (t *BlockBuilder) handleGossipAtx(data service.GossipMessage) {
 
 	t.AtxPool.Put(atx)
 	data.ReportValidation(activation.AtxProtocol)
-	t.With().Info("stored and propagated new syntactically valid ATX", log.AtxId(atx.ShortString()))
+	//t.With().Info("stored and propagated new syntactically valid ATX", log.AtxId(atx.ShortString()))
 }
 
 func (t *BlockBuilder) acceptBlockData() {
