@@ -437,6 +437,7 @@ func (s *swarm) listenToNetworkMessages() {
 			for {
 				select {
 				case msg := <-c:
+					s.lNode.With().Info("new msg from q", log.String("conn_id", msg.Conn.ID()), log.Int("m_size", len(msg.Message)))
 					s.processMessage(msg)
 				case <-s.shutdown:
 					return
@@ -536,7 +537,7 @@ func (s *swarm) onRemoteClientMessage(msg net.IncomingMessageEvent) error {
 	_, ok := s.gossipProtocolHandlers[pm.Metadata.NextProtocol]
 	s.protocolHandlerMutex.RUnlock()
 
-	s.lNode.Debug("Handle %v message from <<  %v", pm.Metadata.NextProtocol, msg.Conn.RemotePublicKey().String())
+	s.lNode.Info("Handle %v message from <<  %v size %v", pm.Metadata.NextProtocol, msg.Conn.RemotePublicKey().String(), len(msg.Message))
 
 	if ok {
 		// pass to gossip relay chan

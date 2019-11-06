@@ -157,6 +157,8 @@ func (b *Broker) eventLoop() {
 				continue
 			}
 
+			b.With().Info("broker got msg", log.Int("size", len(msg.Bytes())), log.String("type", hareMsg.InnerMsg.Type.String()))
+
 			msgInstId := hareMsg.InnerMsg.InstanceId
 			isEarly := false
 			if err := b.validate(hareMsg); err != nil {
