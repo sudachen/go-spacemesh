@@ -112,6 +112,7 @@ func (vq *blockQueue) handleBlockDependencies(blk *types.Block) {
 
 func (vq *blockQueue) finishBlockCallback(block *types.Block) func(res bool) error {
 	return func(res bool) error {
+		vq.Info("start callback for %s", block.Id().String())
 		if !res {
 			vq.Info("finished block %v block, invalid", block.Id())
 			return nil
@@ -169,6 +170,7 @@ func (vq *blockQueue) updateDependencies(block types.Hash32, valid bool) {
 // dependencies can be of type block/layer
 // for block jobs we need to return  a list of finished blocks
 func (vq *blockQueue) removefromDepMaps(block types.Hash32, valid bool, doneBlocks []types.Hash32) []types.Hash32 {
+	vq.Info("remove %v !!!!!!!!!!!!!!!! %v", block.ShortString(), valid)
 	vq.fetchQueue.invalidate(block, valid)
 	vq.Lock()
 	defer vq.Unlock()
