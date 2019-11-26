@@ -198,6 +198,10 @@ func (vq *blockQueue) removefromDepMaps(block types.Hash32, valid bool, doneBloc
 
 func (vq *blockQueue) addDependencies(jobId interface{}, blks []types.BlockID, finishCallback func(res bool) error) (bool, error) {
 	vq.Lock()
+	if _, ok := vq.callbacks[jobId]; ok {
+		return false, fmt.Errorf("job %s already exists ", jobId)
+	}
+
 	vq.callbacks[jobId] = finishCallback
 	dependencys := make(map[types.Hash32]struct{})
 	idsToPush := make([]types.Hash32, 0, len(blks))
@@ -205,6 +209,7 @@ func (vq *blockQueue) addDependencies(jobId interface{}, blks []types.BlockID, f
 		bid := id.AsHash32()
 		if vq.inQueue(bid) {
 			vq.reverseDepMap[bid] = append(vq.reverseDepMap[bid], jobId)
+			vq.Info("block %v in queue", id, jobId)
 			vq.Info("add block %v to %v pending map", id, jobId)
 			dependencys[bid] = struct{}{}
 		} else {
@@ -212,6 +217,7 @@ func (vq *blockQueue) addDependencies(jobId interface{}, blks []types.BlockID, f
 			if _, err := vq.GetBlock(id); err != nil {
 				//unknown block add to queue
 				vq.reverseDepMap[bid] = append(vq.reverseDepMap[bid], jobId)
+				vq.Info("block %v unknown", id, jobId)
 				vq.Info("add block %v to %v pending map", id, jobId)
 				dependencys[bid] = struct{}{}
 				idsToPush = append(idsToPush, id.AsHash32())
