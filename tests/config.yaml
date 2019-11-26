@@ -37,6 +37,8 @@ bootstrap:
     genesis-active-size: '1'
     post-labels: '20'
     data-folder: '/usr/share/spacemesh/'
+    post-labels: '20'
+    data-folder: '/usr/share/spacemesh/'
 client:
   image: 'spacemeshos/go-spacemesh-dev:barak232'
   command: '/bin/go-spacemesh'
