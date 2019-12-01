@@ -15,6 +15,7 @@ import (
 	"github.com/spacemeshos/go-spacemesh/p2p/node"
 	"github.com/spacemeshos/go-spacemesh/p2p/p2pcrypto"
 	"github.com/spacemeshos/go-spacemesh/p2p/service"
+	"github.com/spacemeshos/go-spacemesh/rand"
 	"github.com/spacemeshos/go-spacemesh/timesync"
 	timeSyncConfig "github.com/spacemeshos/go-spacemesh/timesync/config"
 	"strings"
@@ -576,6 +577,9 @@ func (s *swarm) ProcessGossipProtocolMessage(sender p2pcrypto.PublicKey, protoco
 	}
 	s.lNode.Debug("Forwarding message to %v protocol", protocol)
 
+	if rand.Int() % 20 == 0 {
+		s.lNode.Info("p2p monitor sample", log.String("proto_name", protocol), log.Int("len_queue", len(msgchan)), log.Int("msg_size", len(data.Bytes())))
+	}
 	msgchan <- gossipProtocolMessage{sender, data, validationCompletedChan}
 
 	return nil
