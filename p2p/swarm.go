@@ -578,7 +578,7 @@ func (s *swarm) ProcessGossipProtocolMessage(sender p2pcrypto.PublicKey, protoco
 	s.lNode.Debug("Forwarding message to %v protocol", protocol)
 
 	if rand.Int() % 20 == 0 {
-		s.lNode.Info("p2p monitor sample", log.String("proto_name", protocol), log.Int("len_queue", len(msgchan)), log.Int("msg_size", len(data.Bytes())))
+		s.lNode.With().Info("p2p monitor sample", log.String("proto_name", protocol), log.Int("len_queue", len(msgchan)), log.Int("msg_size", len(data.Bytes())))
 	}
 	msgchan <- gossipProtocolMessage{sender, data, validationCompletedChan}
 
