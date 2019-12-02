@@ -9,6 +9,7 @@ import (
 	"github.com/spacemeshos/go-spacemesh/p2p/metrics"
 	"github.com/spacemeshos/go-spacemesh/p2p/p2pcrypto"
 	"github.com/spacemeshos/go-spacemesh/p2p/service"
+	"github.com/spacemeshos/go-spacemesh/rand"
 	"sync"
 )
 
@@ -170,7 +171,9 @@ loop:
 		select {
 		case msgV := <-prot.propagateQ:
 			h := types.CalcMessageHash12(msgV.Message(), msgV.Protocol())
-			prot.Log.With().Debug("new_gossip_message_relay", log.String("protocol", msgV.Protocol()), log.String("hash", util.Bytes2Hex(h[:])))
+			if rand.Int()%20 == 0 {
+				prot.Log.With().Info("new_gossip_message_relay", log.String("protocol", msgV.Protocol()), log.String("hash", util.Bytes2Hex(h[:])), log.Int("len_prop_q", len(prot.propagateQ)))
+			}
 			prot.propagateMessage(msgV.Message(), h, msgV.Protocol(), msgV.Sender())
 		case <-prot.shutdown:
 			err = errors.New("protocol shutdown")
