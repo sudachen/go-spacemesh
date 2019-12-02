@@ -44,3 +44,40 @@ func (m *Monitor) monitor() {
 func (m *Monitor) Start() {
 	go m.monitor()
 }
+
+type reporter interface {
+	Report()
+}
+
+type SimpleMonitor struct {
+	controller *Controller
+	ticker     *time.Ticker
+	term       chan struct{}
+}
+
+func NewSimpleMonitor(controller *Controller, duration time.Duration) *SimpleMonitor {
+	return &SimpleMonitor{
+		controller: controller,
+		ticker:     time.NewTicker(duration),
+		term:       make(chan struct{}),
+	}
+}
+
+func (sm *SimpleMonitor) Start() {
+	go sm.start()
+}
+
+func (sm *SimpleMonitor) start() {
+	for {
+		select {
+		case <-sm.term:
+			return
+		case <-sm.ticker.C:
+			sm.controller.Report()
+		}
+	}
+}
+
+func (sm *SimpleMonitor) Close() {
+	sm.term <- struct{}{}
+}

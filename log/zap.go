@@ -75,6 +75,10 @@ func Uint64(name string, val uint64) Field {
 	return Field(zap.Uint64(name, val))
 }
 
+func Float64 (name string, val float64) Field {
+	return Field(zap.Float64(name, val))
+}
+
 // Namespace make next fields be inside a namespace.
 func Namespace(name string) Field {
 	return Field(zap.Namespace(name))
