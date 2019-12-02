@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -438,6 +439,11 @@ func (s *swarm) listenToNetworkMessages() {
 			for {
 				select {
 				case msg := <-c:
+					if rand.Int()%20 == 0 {
+						addr := &bytes.Buffer{}
+						fmt.Fprint(addr, c)
+						s.lNode.With().Info("p2p monitor queue len", log.Int("queue_len", len(c)), log.String("ch_id", addr.String()))
+					}
 					s.processMessage(msg)
 				case <-s.shutdown:
 					return
@@ -577,8 +583,8 @@ func (s *swarm) ProcessGossipProtocolMessage(sender p2pcrypto.PublicKey, protoco
 	}
 	s.lNode.Debug("Forwarding message to %v protocol", protocol)
 
-	if rand.Int() % 20 == 0 {
-		s.lNode.With().Info("p2p monitor sample", log.String("proto_name", protocol), log.Int("len_queue", len(msgchan)), log.Int("msg_size", len(data.Bytes())))
+	if rand.Int()%20 == 0 {
+		s.lNode.With().Info("p2p monitor sample", log.String("proto_name", protocol), log.Int("msg_size", len(data.Bytes())))
 	}
 	msgchan <- gossipProtocolMessage{sender, data, validationCompletedChan}
 

@@ -347,7 +347,7 @@ func (proc *ConsensusProcess) onEarlyMessage(m *Msg) {
 func (proc *ConsensusProcess) handleMessage(m *Msg) {
 	// Note: instanceId is already verified by the broker
 
-	proc.With().Info("hare CP received message", log.LayerId(uint64(m.Message.InnerMsg.InstanceId)), log.String("msg_type", m.InnerMsg.Type.String()))
+	proc.With().Debug("hare CP received message", log.LayerId(uint64(m.Message.InnerMsg.InstanceId)), log.String("msg_type", m.InnerMsg.Type.String()))
 
 	// validate context
 	err := proc.validator.ContextuallyValidateMessage(m, proc.k)
