@@ -319,6 +319,7 @@ func (s *swarm) sendMessageImpl(peerPubKey p2pcrypto.PublicKey, protocol string,
 	var err error
 	var conn net.Connection
 
+	openStart := time.Now()
 	if peerPubKey == s.lNode.PublicKey() {
 		return errors.New("can't send message to self")
 	}
@@ -348,14 +349,26 @@ func (s *swarm) sendMessageImpl(peerPubKey p2pcrypto.PublicKey, protocol string,
 
 	protomessage.Payload = realpayload
 
+	openEnd := time.Now().Sub(openStart)
+
+	bytesStart := time.Now()
 	data, err := types.InterfaceToBytes(protomessage)
 	if err != nil {
 		return fmt.Errorf("failed to encode signed message err: %v", err)
 	}
+	bytesEnd := time.Now().Sub(bytesStart)
 
+	sealStart := time.Now()
 	final := session.SealMessage(data)
+	sealEnd := time.Now().Sub(sealStart)
 
+	sendStart := time.Now()
 	err = conn.Send(final)
+	sendEnd := time.Now().Sub(sendStart)
+
+	if rand.Int() % 20 == 0{
+		s.lNode.With().Info("monitor p2p sendMessageImpl", log.String("open_d", openEnd.String()), log.String("bytes_d", bytesEnd.String()), log.String("seal_d", sealEnd.String()), log.String("send_d", sendEnd.String()))
+	}
 
 	s.lNode.Debug("DirectMessage sent successfully")
 

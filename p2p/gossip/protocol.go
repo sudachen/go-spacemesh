@@ -5,12 +5,14 @@ import (
 	"github.com/spacemeshos/go-spacemesh/common/types"
 	"github.com/spacemeshos/go-spacemesh/common/util"
 	"github.com/spacemeshos/go-spacemesh/log"
+	"github.com/spacemeshos/go-spacemesh/monitoring"
 	"github.com/spacemeshos/go-spacemesh/p2p/config"
 	"github.com/spacemeshos/go-spacemesh/p2p/metrics"
 	"github.com/spacemeshos/go-spacemesh/p2p/p2pcrypto"
 	"github.com/spacemeshos/go-spacemesh/p2p/service"
 	"github.com/spacemeshos/go-spacemesh/rand"
 	"sync"
+	"time"
 )
 
 const oldMessageCacheSize = 10000
@@ -42,11 +44,18 @@ type Protocol struct {
 	oldMessageQ *types.DoubleCache
 
 	propagateQ chan service.MessageValidation
+
+	monitor    *monitoring.SimpleMonitor
+	controller *monitoring.Controller
 }
 
 // NewProtocol creates a new gossip protocol instance. Call Start to start reading peers
 func NewProtocol(config config.SwarmConfig, base baseNetwork, localNodePubkey p2pcrypto.PublicKey, log2 log.Log) *Protocol {
 	// intentionally not subscribing to peers events so that the channels won't block in case executing Start delays
+
+	controller := monitoring.NewController(log2)
+	monitor := monitoring.NewSimpleMonitor(controller, 10*time.Second)
+	//monitor.Start()
 	return &Protocol{
 		Log:             log2,
 		config:          config,
@@ -56,6 +65,8 @@ func NewProtocol(config config.SwarmConfig, base baseNetwork, localNodePubkey p2
 		shutdown:        make(chan struct{}),
 		oldMessageQ:     types.NewDoubleCache(oldMessageCacheSize), // todo : remember to drain this
 		propagateQ:      make(chan service.MessageValidation, propagateHandleBufferSize),
+		monitor:         monitor,
+		controller:      controller,
 	}
 }
 
@@ -100,6 +111,7 @@ func (prot *Protocol) propagateMessage(payload []byte, h types.Hash12, nextProt 
 	}
 	prot.peersMutex.RUnlock()
 	var wg sync.WaitGroup
+	st := time.Now()
 peerLoop:
 	for _, p := range peers {
 		if exclude == p {
@@ -116,6 +128,12 @@ peerLoop:
 		}(p)
 	}
 	wg.Wait()
+
+	if rand.Int()%20 == 0 {
+		prot.Info("p2p monitor prop message", log.String("send_all", time.Now().Sub(st).String()))
+	}
+
+	//go prot.controller.Update("send_all_neighbors", uint64(time.Now().Sub(st).Nanoseconds()))
 }
 
 // Broadcast is the actual broadcast procedure - process the message internally and loop on peers and add the message to their queues
