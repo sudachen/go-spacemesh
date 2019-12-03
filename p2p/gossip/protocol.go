@@ -130,7 +130,7 @@ peerLoop:
 	wg.Wait()
 
 	if rand.Int()%20 == 0 {
-		prot.Info("p2p monitor prop message", log.String("send_all", time.Now().Sub(st).String()))
+		prot.With().Info("p2p monitor prop message", log.String("send_all", time.Now().Sub(st).String()))
 	}
 
 	//go prot.controller.Update("send_all_neighbors", uint64(time.Now().Sub(st).Nanoseconds()))
