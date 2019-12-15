@@ -77,12 +77,14 @@ func (bl *BlockListener) ListenToGossipBlocks() {
 }
 
 func (bl *BlockListener) handleBlock(data service.GossipMessage) {
-	var blk types.Block
-	err := types.BytesToInterface(data.Bytes(), &blk)
+	var pblk types.Block
+	err := types.BytesToInterface(data.Bytes(), &pblk)
 	if err != nil {
 		bl.Error("received invalid block %v", data.Bytes(), err)
 		return
 	}
+
+	blk := &pblk
 
 	//set the block id when received
 	blk.CalcAndSetId()
@@ -93,19 +95,19 @@ func (bl *BlockListener) handleBlock(data service.GossipMessage) {
 		bl.With().Info("we already know this block", log.BlockId(blk.Id().String()))
 		return
 	}
-	txs, atxs, err := bl.blockSyntacticValidation(&blk)
+	txs, atxs, err := bl.blockSyntacticValidation(blk)
 	if err != nil {
 		bl.With().Error("failed to validate block", log.BlockId(blk.Id().String()), log.Err(err))
 		return
 	}
 	data.ReportValidation(config.NewBlockProtocol)
-	if err := bl.AddBlockWithTxs(&blk, txs, atxs); err != nil {
+	if err := bl.AddBlockWithTxs(blk, txs, atxs); err != nil {
 		bl.With().Error("failed to add block to database", log.BlockId(blk.Id().String()), log.Err(err))
 		return
 	}
 
 	if blk.Layer() <= bl.ValidatedLayer() {
-		bl.Syncer.HandleLateBlock(&blk)
+		bl.Syncer.HandleLateBlock(blk)
 	}
 	return
 }
