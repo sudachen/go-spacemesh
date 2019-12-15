@@ -3,6 +3,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"github.com/spacemeshos/ed25519"
 	"github.com/spacemeshos/go-spacemesh/activation"
 	"github.com/spacemeshos/go-spacemesh/amcl"
 	"github.com/spacemeshos/go-spacemesh/amcl/BLS381"
@@ -778,7 +779,10 @@ func (app *SpacemeshApp) Start(cmd *cobra.Command, args []string) {
 	rng := amcl.NewRAND()
 	pub := app.edSgn.PublicKey().Bytes()
 	rng.Seed(len(pub), app.edSgn.Sign(pub)) // assuming ed.private is random, the sig can be used as seed
-	vrfPriv, vrfPub := BLS381.GenKeyPair(rng)
+	//vrfPriv, vrfPub := BLS381.GenKeyPair(rng)
+
+	vrfPub, vrfPriv, err := ed25519.GenerateKey(nil)
+
 	vrfSigner := BLS381.NewBlsSigner(vrfPriv)
 	nodeID := types.NodeId{Key: app.edSgn.PublicKey().String(), VRFPublicKey: vrfPub}
 
