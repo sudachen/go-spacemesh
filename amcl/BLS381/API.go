@@ -1,22 +1,24 @@
 package BLS381
 
 import (
-	"errors"
-	"fmt"
+	"crypto/rand"
 	"github.com/spacemeshos/go-spacemesh/amcl"
+	"golang.org/x/crypto/ed25519"
 )
 
 // Verify2 verifies a message using BLS381
 func Verify2(msg, sig, pub []byte) (bool, error) {
-	if uint(len(pub)) != 4*MODBYTES {
-		return false, fmt.Errorf("verify failed: len of public key should be %v but is %v", 4*MODBYTES, len(pub))
-	}
+	//if uint(len(pub)) != 4*MODBYTES {
+	//	return false, fmt.Errorf("verify failed: len of public key should be %v but is %v", 4*MODBYTES, len(pub))
+	//}
+	//
+	//if uint(len(sig)) != 2*MODBYTES+1 {
+	//	return false, fmt.Errorf("verify failed: len of sig should be %v but is %v", MODBYTES+1, len(sig))
+	//}
 
-	if uint(len(sig)) != 2*MODBYTES+1 {
-		return false, fmt.Errorf("verify failed: len of sig should be %v but is %v", MODBYTES+1, len(sig))
-	}
+	return ed25519.Verify(pub, msg, sig), nil
 
-	return Verify(sig, string(msg), pub) == BLS_OK, nil
+	//return Verify(sig, string(msg), pub) == BLS_OK, nil
 }
 
 // BlsSigner signs a message with BLS381
@@ -30,16 +32,18 @@ func NewBlsSigner(priv []byte) *BlsSigner {
 
 // Sign a message
 func (bs *BlsSigner) Sign(msg []byte) ([]byte, error) {
-	if msg == nil {
-		return nil, errors.New("sign failed: nil message")
-	}
+	//if msg == nil {
+	//	return nil, errors.New("sign failed: nil message")
+	//}
+	//
+	//if uint(len(bs.priv)) != MODBYTES {
+	//	return nil, fmt.Errorf("sign failed: len of private key should be %v but is %v", MODBYTES, len(bs.priv))
+	//}
 
-	if uint(len(bs.priv)) != MODBYTES {
-		return nil, fmt.Errorf("sign failed: len of private key should be %v but is %v", MODBYTES, len(bs.priv))
-	}
+	//sig := make([]byte, 2*MODBYTES+1)
+	//Sign(sig, string(msg), bs.priv)
 
-	sig := make([]byte, 2*MODBYTES+1)
-	Sign(sig, string(msg), bs.priv)
+	sig := ed25519.Sign(bs.priv, msg)
 
 	return sig, nil
 }
@@ -56,10 +60,14 @@ func DefaultSeed() *amcl.RAND {
 }
 
 func GenKeyPair(rng *amcl.RAND) ([]byte, []byte) {
-	priv := make([]byte, MODBYTES)
-	pub := make([]byte, 4*MODBYTES)
+	//priv := make([]byte, MODBYTES)
+	//pub := make([]byte, 4*MODBYTES)
+	//KeyPairGenerate(rng, priv, pub)
 
-	KeyPairGenerate(rng, priv, pub)
+	priv, pub, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		panic("fuck this hack failed")
+	}
 
 	return priv, pub
 }
