@@ -538,14 +538,14 @@ func (app *SpacemeshApp) initServices(nodeID types.NodeId, swarm service.Service
 
 	poetListener := activation.NewPoetListener(swarm, poetDb, app.addLogger(PoetListenerLogger, lg))
 
-	nipstBuilder := activation.NewNIPSTBuilder(util.Hex2Bytes(nodeID.Key), postClient, poetClient, poetDb, store, app.addLogger(NipstBuilderLogger, lg))
+	//nipstBuilder := activation.NewNIPSTBuilder(util.Hex2Bytes(nodeID.Key), postClient, poetClient, poetDb, store, app.addLogger(NipstBuilderLogger, lg))
 
 	coinBase := types.HexToAddress(app.Config.CoinbaseAccount)
 
 	if coinBase.Big().Uint64() == 0 && app.Config.StartMining {
 		app.log.Panic("invalid Coinbase account")
 	}
-	atxBuilder := activation.NewBuilder(nodeID, coinBase, sgn, atxdb, swarm, msh, layersPerEpoch, nipstBuilder, postClient, clock.Subscribe(), syncer.ListenToGossip, store, app.addLogger("atxBuilder", lg))
+	//atxBuilder := activation.NewBuilder(nodeID, coinBase, sgn, atxdb, swarm, msh, layersPerEpoch, nipstBuilder, postClient, clock.Subscribe(), syncer.ListenToGossip, store, app.addLogger("atxBuilder", lg))
 
 	app.blockProducer = blockProducer
 	app.blockListener = blockListener
@@ -556,7 +556,7 @@ func (app *SpacemeshApp) initServices(nodeID types.NodeId, swarm service.Service
 	app.hare = ha
 	app.P2P = swarm
 	app.poetListener = poetListener
-	app.atxBuilder = atxBuilder
+	app.atxBuilder = nil
 	app.oracle = blockOracle
 	return nil
 }
@@ -575,17 +575,17 @@ func (app *SpacemeshApp) startServices() {
 
 	app.poetListener.Start()
 
-	if app.Config.StartMining {
-		coinBase := types.HexToAddress(app.Config.CoinbaseAccount)
-		err := app.atxBuilder.StartPost(coinBase, app.Config.POST.DataDir, app.Config.POST.SpacePerUnit)
-		if err != nil {
-			log.Error("Error initializing post, err: %v", err)
-			log.Panic("Error initializing post")
-		}
-	} else {
-		log.Info("Manual post init")
-	}
-	app.atxBuilder.Start()
+	//if app.Config.StartMining {
+	//	//coinBase := types.HexToAddress(app.Config.CoinbaseAccount)
+	//	////err := app.atxBuilder.StartPost(coinBase, app.Config.POST.DataDir, app.Config.POST.SpacePerUnit)
+	//	//if err != nil {
+	//	//	log.Error("Error initializing post, err: %v", err)
+	//	//	log.Panic("Error initializing post")
+	//	//}
+	//} else {
+	//	log.Info("Manual post init")
+	//}
+	//app.atxBuilder.Start()
 	app.clock.StartNotifying()
 }
 
@@ -618,10 +618,10 @@ func (app *SpacemeshApp) stopServices() {
 		app.poetListener.Close()
 	}
 
-	if app.atxBuilder != nil {
-		app.log.Info("closing atx builder")
-		app.atxBuilder.Stop()
-	}
+	//if app.atxBuilder != nil {
+	//	app.log.Info("closing atx builder")
+	//	app.atxBuilder.Stop()
+	//}
 
 	if app.blockListener != nil {
 		app.log.Info("%v closing blockListener", app.nodeId.Key)
