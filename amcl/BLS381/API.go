@@ -64,7 +64,7 @@ func GenKeyPair(rng *amcl.RAND) ([]byte, []byte) {
 	//pub := make([]byte, 4*MODBYTES)
 	//KeyPairGenerate(rng, priv, pub)
 
-	priv, pub, err := ed25519.GenerateKey(rand.Reader)
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		panic("fuck this hack failed")
 	}
