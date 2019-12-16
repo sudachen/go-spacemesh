@@ -163,7 +163,7 @@ func (s *Syncer) getGossipBufferingStatus() Status {
 
 //api for other modules to check if they should listen to gossip
 func (s *Syncer) ListenToGossip() bool {
-	return s.getGossipBufferingStatus() != Pending
+	return true
 }
 
 func (s *Syncer) setGossipBufferingStatus(b Status) {
@@ -174,7 +174,7 @@ func (s *Syncer) setGossipBufferingStatus(b Status) {
 
 func (s *Syncer) IsSynced() bool {
 	s.Log.Info("latest: %v, maxSynced %v", s.LatestLayer(), s.lastTickedLayer())
-	return s.weaklySynced() && s.getGossipBufferingStatus() == Done
+	return true
 }
 
 func (s *Syncer) Start() {

@@ -125,9 +125,13 @@ func (suite *AppTestSuite) initSingleInstance(i int, genesisTime string, rng *am
 	edSgn := signing.NewEdSigner()
 	pub := edSgn.PublicKey()
 
+	//rng := amcl.NewRAND()
+	//pub := app.edSgn.PublicKey().Bytes()
+	//rng.Seed(len(pub), app.edSgn.Sign(pub)) // assuming ed.private is random, the sig can be used as seed
 	//vrfPriv, vrfPub := BLS381.GenKeyPair(rng)
 
 	vrfPub, vrfPriv, err := ed25519.GenerateKey(nil)
+
 	vrfSigner := BLS381.NewBlsSigner(vrfPriv)
 	nodeID := types.NodeId{Key: pub.String(), VRFPublicKey: vrfPub}
 

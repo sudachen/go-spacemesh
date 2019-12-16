@@ -68,7 +68,8 @@ func (bl *BlockListener) ListenToGossipBlocks() {
 					return
 				}
 
-				bl.handleBlock(data)
+				bl.Info("got new block")
+				//bl.handleBlock(data)
 
 			}()
 
