@@ -460,23 +460,23 @@ func (s *Syncer) blockSyntacticValidation(block *types.Block) ([]*types.Transact
 	}
 
 	//data availability
-	txs, atxs, err := s.DataAvailability(block)
-	if err != nil {
-		return nil, nil, fmt.Errorf("DataAvailabilty failed for block %v err: %v", block.Id(), err)
-	}
+	//txs, atxs, err := s.DataAvailability(block)
+	//if err != nil {
+	//	return nil, nil, fmt.Errorf("DataAvailabilty failed for block %v err: %v", block.Id(), err)
+	//}
 
-	//validate block's view
-	valid := s.validateBlockView(block)
-	if valid == false {
-		return nil, nil, errors.New(fmt.Sprintf("block %v not syntacticly valid", block.Id()))
-	}
+	////validate block's view
+	//valid := s.validateBlockView(block)
+	//if valid == false {
+	//	return nil, nil, errors.New(fmt.Sprintf("block %v not syntacticly valid", block.Id()))
+	//}
+	//
+	////validate block's votes
+	//if valid, err := validateVotes(block, s.ForBlockInView, s.Hdist, s.Log); valid == false || err != nil {
+	//	return nil, nil, errors.New(fmt.Sprintf("validate votes failed for block %v, %v", block.Id(), err))
+	//}
 
-	//validate block's votes
-	if valid, err := validateVotes(block, s.ForBlockInView, s.Hdist, s.Log); valid == false || err != nil {
-		return nil, nil, errors.New(fmt.Sprintf("validate votes failed for block %v, %v", block.Id(), err))
-	}
-
-	return txs, atxs, nil
+	return nil, nil, nil
 }
 
 func (s *Syncer) validateBlockView(blk *types.Block) bool {
