@@ -3,6 +3,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"github.com/spacemeshos/ed25519"
 	"github.com/spacemeshos/go-spacemesh/activation"
 	"github.com/spacemeshos/go-spacemesh/amcl"
 	"github.com/spacemeshos/go-spacemesh/amcl/BLS381"
@@ -13,7 +14,6 @@ import (
 	"github.com/spacemeshos/go-spacemesh/database"
 	"github.com/spacemeshos/go-spacemesh/events"
 	"github.com/spacemeshos/go-spacemesh/hare"
-	"github.com/spacemeshos/go-spacemesh/hare/eligibility"
 	"github.com/spacemeshos/go-spacemesh/mesh"
 	"github.com/spacemeshos/go-spacemesh/metrics"
 	"github.com/spacemeshos/go-spacemesh/miner"
@@ -23,7 +23,7 @@ import (
 	"github.com/spacemeshos/go-spacemesh/signing"
 	"github.com/spacemeshos/go-spacemesh/state"
 	"github.com/spacemeshos/go-spacemesh/sync"
-	"github.com/spacemeshos/go-spacemesh/tortoise"
+	"github.com/spacemeshos/go-spacemesh/turbohare"
 	"github.com/spacemeshos/go-spacemesh/version"
 	"github.com/spacemeshos/post/shared"
 	"go.uber.org/zap"
@@ -103,6 +103,12 @@ func init() {
 	Cmd.AddCommand(VersionCmd)
 }
 
+type Hare interface {
+	Start() error
+	Close()
+	GetResult(lid types.LayerID) ([]types.BlockID, error)
+}
+
 // SpacemeshApp is the cli app singleton
 type SpacemeshApp struct {
 	*cobra.Command
@@ -119,7 +125,7 @@ type SpacemeshApp struct {
 	txProcessor    *state.TransactionProcessor
 	mesh           *mesh.Mesh
 	clock          *timesync.Ticker
-	hare           *hare.Hare
+	hare           Hare
 	atxBuilder     *activation.Builder
 	poetListener   *activation.PoetListener
 	edSgn          *signing.EdSigner
@@ -380,6 +386,15 @@ func (app *SpacemeshApp) SetLogLevel(name, loglevel string) error {
 	return nil
 }
 
+type MeshValidatorMock struct {
+	mdb *mesh.MeshDB
+}
+
+func (m *MeshValidatorMock) HandleIncomingLayer(layer *types.Layer) (types.LayerID, types.LayerID) {
+	return layer.Index() - 1, layer.Index()
+}
+func (m *MeshValidatorMock) HandleLateBlock(bl *types.Block) {}
+
 func (app *SpacemeshApp) initServices(nodeID types.NodeId, swarm service.Service, dbStorepath string, sgn hare.Signer, isFixedOracle bool, rolacle hare.Rolacle, layerSize uint32, postClient activation.PostProverClient, poetClient activation.PoetProvingServiceClient, vrfSigner *BLS381.BlsSigner, layersPerEpoch uint16) error {
 
 	app.nodeId = nodeID
@@ -462,15 +477,15 @@ func (app *SpacemeshApp) initServices(nodeID types.NodeId, swarm service.Service
 	eValidator := oracle.NewBlockEligibilityValidator(layerSize, uint32(app.Config.GenesisActiveSet), layersPerEpoch, atxdb, beaconProvider, BLS381.Verify2, app.addLogger(BlkEligibilityLogger, lg))
 
 	var msh *mesh.Mesh
-	var trtl *tortoise.Algorithm
-	if mdb.PersistentData() {
-		trtl = tortoise.NewRecoveredAlgorithm(mdb, app.addLogger(TrtlLogger, lg))
-		msh = mesh.NewRecoveredMesh(mdb, atxdb, app.Config.REWARD, trtl, app.txPool, atxpool, processor, app.addLogger(MeshLogger, lg))
-
-	} else {
-		trtl = tortoise.NewAlgorithm(int(layerSize), mdb, app.Config.Hdist, app.addLogger(TrtlLogger, lg))
-		msh = mesh.NewMesh(mdb, atxdb, app.Config.REWARD, trtl, app.txPool, atxpool, processor, app.addLogger(MeshLogger, lg))
-	}
+	//var trtl *tortoise.Algorithm
+	//if mdb.PersistentData() {
+	//	trtl = tortoise.NewRecoveredAlgorithm(mdb, app.addLogger(TrtlLogger, lg))
+	//	msh = mesh.NewRecoveredMesh(mdb, atxdb, app.Config.REWARD, trtl, app.txPool, atxpool, processor, app.addLogger(MeshLogger, lg))
+	//
+	//} else {
+	//trtl = tortoise.NewAlgorithm(int(layerSize), mdb, app.Config.Hdist, app.addLogger(TrtlLogger, lg))
+	msh = mesh.NewMesh(mdb, atxdb, app.Config.REWARD, &MeshValidatorMock{}, app.txPool, atxpool, processor, app.addLogger(MeshLogger, lg))
+	//}
 
 	conf := sync.Configuration{Concurrency: 4, LayerSize: int(layerSize), LayersPerEpoch: layersPerEpoch, RequestTimeout: time.Duration(app.Config.SyncRequestTimeout) * time.Millisecond, Hdist: app.Config.Hdist, AtxsLimit: app.Config.AtxsPerBlock}
 	if app.Config.AtxsPerBlock > miner.AtxsPerBlockLimit { // validate limit
@@ -487,33 +502,33 @@ func (app *SpacemeshApp) initServices(nodeID types.NodeId, swarm service.Service
 	blockOracle := oracle.NewMinerBlockOracle(layerSize, uint32(app.Config.GenesisActiveSet), layersPerEpoch, atxdb, beaconProvider, vrfSigner, nodeID, syncer.ListenToGossip, app.addLogger(BlockOracle, lg))
 
 	// TODO: we should probably decouple the apptest and the node (and duplicate as necessary)
-	var hOracle hare.Rolacle
-	if isFixedOracle { // fixed rolacle, take the provided rolacle
-		hOracle = rolacle
-	} else { // regular oracle, build and use it
-		beacon := eligibility.NewBeacon(mdb, app.Config.HareEligibility.ConfidenceParam)
-		hOracle = eligibility.New(beacon, atxdb.CalcActiveSetSize, BLS381.Verify2, vrfSigner, uint16(app.Config.LayersPerEpoch), app.Config.GenesisActiveSet, mdb, app.Config.HareEligibility, app.addLogger(HareOracleLogger, lg))
-	}
+	//var hOracle hare.Rolacle
+	//if isFixedOracle { // fixed rolacle, take the provided rolacle
+	//	hOracle = rolacle
+	//} else { // regular oracle, build and use it
+	//	beacon := eligibility.NewBeacon(mdb, app.Config.HareEligibility.ConfidenceParam)
+	//	hOracle = eligibility.New(beacon, atxdb.CalcActiveSetSize, BLS381.Verify2, vrfSigner, uint16(app.Config.LayersPerEpoch), app.Config.GenesisActiveSet, mdb, app.Config.HareEligibility, app.addLogger(HareOracleLogger, lg))
+	//}
 
 	// a function to validate we know the blocks
-	validationFunc := func(ids []types.BlockID) bool {
-		for _, b := range ids {
-			res, err := mdb.GetBlock(b)
-			if err != nil {
-				app.log.With().Error("failed to validate block", log.BlockId(b.String()))
-				return false
-			}
-			if res == nil {
-				app.log.With().Error("failed to validate block (BUG BUG BUG - GetBlock return err nil and res nil)", log.BlockId(b.String()))
-				return false
-			}
-
-		}
-
-		return true
-	}
-
-	ha := hare.New(app.Config.HARE, swarm, sgn, nodeID, validationFunc, syncer.IsSynced, msh, hOracle, uint16(app.Config.LayersPerEpoch), idStore, hOracle, clock.Subscribe(), app.addLogger(HareLogger, lg))
+	//validationFunc := func(ids []types.BlockID) bool {
+	//	for _, b := range ids {
+	//		res, err := mdb.GetBlock(b)
+	//		if err != nil {
+	//			app.log.With().Error("failed to validate block", log.BlockId(b.String()))
+	//			return false
+	//		}
+	//		if res == nil {
+	//			app.log.With().Error("failed to validate block (BUG BUG BUG - GetBlock return err nil and res nil)", log.BlockId(b.String()))
+	//			return false
+	//		}
+	//
+	//	}
+	//
+	//	return true
+	//}
+	ha := turbohare.New(msh)
+	//ha := hare.New(app.Config.HARE, swarm, sgn, nodeID, validationFunc, syncer.IsSynced, msh, hOracle, uint16(app.Config.LayersPerEpoch), idStore, hOracle, clock.Subscribe(), app.addLogger(HareLogger, lg))
 
 	stateAndMeshProjector := pending_txs.NewStateAndMeshProjector(st, msh)
 	blockProducer := miner.NewBlockBuilder(nodeID, sgn, swarm, clock.Subscribe(), app.Config.Hdist, app.txPool, atxpool, coinToss, msh, ha, blockOracle, processor, atxdb, syncer, app.Config.AtxsPerBlock, stateAndMeshProjector, app.addLogger(BlockBuilderLogger, lg))
@@ -764,7 +779,10 @@ func (app *SpacemeshApp) Start(cmd *cobra.Command, args []string) {
 	rng := amcl.NewRAND()
 	pub := app.edSgn.PublicKey().Bytes()
 	rng.Seed(len(pub), app.edSgn.Sign(pub)) // assuming ed.private is random, the sig can be used as seed
-	vrfPriv, vrfPub := BLS381.GenKeyPair(rng)
+	//vrfPriv, vrfPub := BLS381.GenKeyPair(rng)
+
+	vrfPub, vrfPriv, err := ed25519.GenerateKey(nil)
+
 	vrfSigner := BLS381.NewBlsSigner(vrfPriv)
 	nodeID := types.NodeId{Key: app.edSgn.PublicKey().String(), VRFPublicKey: vrfPub}
 
