@@ -101,10 +101,10 @@ func (bl *BlockListener) handleBlock(data service.GossipMessage) {
 	//	return
 	//}
 	//data.ReportValidation(config.NewBlockProtocol)
-	//if err := bl.AddBlockWithTxs(blk, nil, nil); err != nil {
-	//	bl.With().Error("failed to add block to database", log.BlockId(blk.Id().String()), log.Err(err))
-	//	return
-	//}
+	if err := bl.AddBlockWithTxs(blk, nil, nil); err != nil {
+		bl.With().Error("failed to add block to database", log.BlockId(blk.Id().String()), log.Err(err))
+		return
+	}
 	//
 	//if blk.Layer() <= bl.ValidatedLayer() {
 	//	bl.Syncer.HandleLateBlock(blk)
