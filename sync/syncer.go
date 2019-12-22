@@ -458,9 +458,9 @@ func validateUniqueTxAtx(b *types.Block) error {
 
 func (s *Syncer) blockSyntacticValidation(block *types.Block) ([]*types.Transaction, []*types.ActivationTx, error) {
 	// validate unique tx atx
-	//if err := s.fastValidation(block); err != nil {
-	//	return nil, nil, err
-	//}
+	if err := s.fastValidation(block); err != nil {
+		return nil, nil, err
+	}
 
 	//data availability
 	//txs, atxs, err := s.DataAvailability(block)
