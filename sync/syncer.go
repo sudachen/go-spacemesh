@@ -212,7 +212,7 @@ func (s *Syncer) run() {
 			s.Mesh.SetLatestLayer(layer)
 			s.currentLayerMutex.Unlock()
 			s.Debug("sync got tick for layer %v", layer)
-			go syncRoutine()
+			//go syncRoutine()
 		}
 	}
 }
