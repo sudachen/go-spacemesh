@@ -63,7 +63,7 @@ func NewPersistentMeshDB(path string, log log.Log) (*MeshDB, error) {
 
 	ll := &MeshDB{
 		Log:                log,
-		blockCache:         NewBlockCache(100 * layerSize),
+		blockCache:         NewBlockCache(20 * layerSize),
 		blocks:             bdb,
 		layers:             ldb,
 		transactions:       tdb,

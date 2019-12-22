@@ -163,7 +163,7 @@ func (s *Syncer) getGossipBufferingStatus() Status {
 
 //api for other modules to check if they should listen to gossip
 func (s *Syncer) ListenToGossip() bool {
-	return s.getGossipBufferingStatus() != Pending
+	return true
 }
 
 func (s *Syncer) setGossipBufferingStatus(b Status) {
@@ -173,8 +173,9 @@ func (s *Syncer) setGossipBufferingStatus(b Status) {
 }
 
 func (s *Syncer) IsSynced() bool {
-	s.Log.Info("latest: %v, maxSynced %v", s.LatestLayer(), s.lastTickedLayer())
-	return s.weaklySynced() && s.getGossipBufferingStatus() == Done
+	//s.Log.Info("latest: %v, maxSynced %v", s.LatestLayer(), s.lastTickedLayer())
+	//return s.weaklySynced() && s.getGossipBufferingStatus() == Done
+	return true
 }
 
 func (s *Syncer) Start() {
@@ -455,9 +456,9 @@ func validateUniqueTxAtx(b *types.Block) error {
 
 func (s *Syncer) blockSyntacticValidation(block *types.Block) ([]*types.Transaction, []*types.ActivationTx, error) {
 	// validate unique tx atx
-	if err := s.fastValidation(block); err != nil {
-		return nil, nil, err
-	}
+	//if err := s.fastValidation(block); err != nil {
+	//	return nil, nil, err
+	//}
 
 	//data availability
 	//txs, atxs, err := s.DataAvailability(block)
@@ -465,16 +466,16 @@ func (s *Syncer) blockSyntacticValidation(block *types.Block) ([]*types.Transact
 	//	return nil, nil, fmt.Errorf("DataAvailabilty failed for block %v err: %v", block.Id(), err)
 	//}
 
-	////validate block's view
-	//valid := s.validateBlockView(block)
-	//if valid == false {
-	//	return nil, nil, errors.New(fmt.Sprintf("block %v not syntacticly valid", block.Id()))
-	//}
-	//
-	////validate block's votes
-	//if valid, err := validateVotes(block, s.ForBlockInView, s.Hdist, s.Log); valid == false || err != nil {
-	//	return nil, nil, errors.New(fmt.Sprintf("validate votes failed for block %v, %v", block.Id(), err))
-	//}
+	//validate block's view
+	valid := s.validateBlockView(block)
+	if valid == false {
+		return nil, nil, errors.New(fmt.Sprintf("block %v not syntacticly valid", block.Id()))
+	}
+
+	//validate block's votes
+	if valid, err := validateVotes(block, s.ForBlockInView, s.Hdist, s.Log); valid == false || err != nil {
+		return nil, nil, errors.New(fmt.Sprintf("validate votes failed for block %v, %v", block.Id(), err))
+	}
 
 	return nil, nil, nil
 }

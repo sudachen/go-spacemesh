@@ -40,6 +40,7 @@ type TxValidator interface {
 
 type AtxValidator interface {
 	SyntacticallyValidateAtx(atx *types.ActivationTx) error
+	ProcessAtx(atxs *types.ActivationTx) error
 }
 
 type Syncer interface {
@@ -127,7 +128,7 @@ func (t *BlockBuilder) Start() error {
 
 	t.started = true
 	go t.acceptBlockData()
-	go t.listenForTx()
+	//go t.listenForTx()
 	go t.listenForAtx()
 	return nil
 }
@@ -232,6 +233,11 @@ func (t *BlockBuilder) createBlock(id types.LayerID, atxID types.AtxId, eligibil
 	//	return nil, err
 	//}
 
+	viewEdges, err := t.meshProvider.GetOrphanBlocksBefore(id)
+	if err != nil {
+		return nil, err
+	}
+
 	b := types.MiniBlock{
 		BlockHeader: types.BlockHeader{
 			LayerIndex:       id,
@@ -241,7 +247,7 @@ func (t *BlockBuilder) createBlock(id types.LayerID, atxID types.AtxId, eligibil
 			Coin:             t.weakCoinToss.GetResult(),
 			Timestamp:        time.Now().UnixNano(),
 			BlockVotes:       nil,
-			ViewEdges:        nil,
+			ViewEdges:        viewEdges,
 		},
 		AtxIds: selectAtxs(atxids, t.atxsPerBlock),
 		TxIds:  txids,
@@ -289,6 +295,7 @@ func (t *BlockBuilder) listenForTx() {
 		case <-t.stopChan:
 			return
 		case data := <-t.txGossipChannel:
+			continue
 			if !t.syncer.ListenToGossip() {
 				// not accepting txs when not synced
 				continue
@@ -383,9 +390,9 @@ func (t *BlockBuilder) handleGossipAtx(data service.GossipMessage) {
 		return
 	}
 
-	t.AtxPool.Put(atx)
 	data.ReportValidation(activation.AtxProtocol)
 	t.With().Info("stored and propagated new syntactically valid ATX", log.AtxId(atx.ShortString()))
+	t.atxValidator.ProcessAtx(atx)
 }
 
 func (t *BlockBuilder) acceptBlockData() {
