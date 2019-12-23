@@ -418,12 +418,12 @@ func (t *BlockBuilder) acceptBlockData() {
 			}
 
 			for _, eligibilityProof := range proofs {
-				txList, err := t.TransactionPool.GetTxsForBlock(MaxTransactionsPerBlock, t.projector.GetProjection)
+				_, err := t.TransactionPool.GetTxsForBlock(MaxTransactionsPerBlock, t.projector.GetProjection)
 				if err != nil {
 					t.With().Error("failed to get txs for block", log.LayerId(uint64(layerID)), log.Err(err))
 					continue
 				}
-				blk, err := t.createBlock(layerID, atxID, eligibilityProof, txList, atxList)
+				blk, err := t.createBlock(layerID, atxID, eligibilityProof, nil, atxList)
 				if err != nil {
 					t.Error("cannot create new block, %v ", err)
 					continue
