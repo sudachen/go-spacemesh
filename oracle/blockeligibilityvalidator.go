@@ -1,7 +1,6 @@
 package oracle
 
 import (
-	"errors"
 	"fmt"
 	"github.com/spacemeshos/ed25519"
 	"github.com/spacemeshos/go-spacemesh/common/types"
@@ -49,20 +48,20 @@ func (v BlockEligibilityValidator) BlockSignedAndEligible(block *types.Block) (b
 		return false, err
 	}
 
-	pubString := signing.NewPublicKey(pubKey).String()
+	signing.NewPublicKey(pubKey).String()
 
-	nodeId, active, atxid, err := v.activationDb.IsIdentityActive(pubString, block.Layer())
-	if err != nil {
-		return false, errors.New(fmt.Sprintf("error while checking IsIdentityActive for %v %v", block.Id(), err))
-	}
+	//nodeId, active, atxid, err := v.activationDb.IsIdentityActive(pubString, block.Layer())
+	//if err != nil {
+	//	return false, errors.New(fmt.Sprintf("error while checking IsIdentityActive for %v %v", block.Id(), err))
+	//}
 
-	if !active {
-		return false, errors.New(fmt.Sprintf("block %v identity activation check failed (ignore if the publication layer is in genesis)", block.Id()))
-	}
+	//if !active {
+	//	return false, errors.New(fmt.Sprintf("block %v identity activation check failed (ignore if the publication layer is in genesis)", block.Id()))
+	//}
 
-	if atxid != block.ATXID {
-		return false, errors.New(fmt.Sprintf("wrong associated atx got %v expected %v ", block.ATXID.ShortString(), atxid.ShortString()))
-	}
+	//if atxid != block.ATXID {
+	//	return false, errors.New(fmt.Sprintf("wrong associated atx got %v expected %v ", block.ATXID.ShortString(), atxid.ShortString()))
+	//}
 
 	epochNumber := block.LayerIndex.GetEpoch(v.layersPerEpoch)
 
@@ -85,19 +84,19 @@ func (v BlockEligibilityValidator) BlockSignedAndEligible(block *types.Block) (b
 	}
 
 	epochBeacon := v.beaconProvider.GetBeacon(epochNumber)
-	message := serializeVRFMessage(epochBeacon, epochNumber, counter)
+	serializeVRFMessage(epochBeacon, epochNumber, counter)
 	vrfSig := block.EligibilityProof.Sig
 
-	res, err := v.validateVRF(message, vrfSig, []byte(nodeId.VRFPublicKey))
+	//res, err := v.validateVRF(message, vrfSig, []byte(nodeId.VRFPublicKey))
 	if err != nil {
 		v.log.Error("eligibility VRF validation erred: %v", err)
 		return false, fmt.Errorf("eligibility VRF validation failed: %v", err)
 	}
 
-	if !res {
-		v.log.Error("eligibility VRF validation failed")
-		return false, nil
-	}
+	//if !res {
+	//	v.log.Error("eligibility VRF validation failed")
+	//	return false, nil
+	//}
 
 	eligibleLayer := calcEligibleLayer(epochNumber, v.layersPerEpoch, sha256.Sum256(vrfSig))
 

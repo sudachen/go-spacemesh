@@ -2,6 +2,7 @@ package node
 
 import (
 	"fmt"
+	"github.com/spacemeshos/ed25519"
 	"github.com/spacemeshos/go-spacemesh/activation"
 	"github.com/spacemeshos/go-spacemesh/amcl"
 	"github.com/spacemeshos/go-spacemesh/amcl/BLS381"
@@ -124,7 +125,13 @@ func (suite *AppTestSuite) initSingleInstance(i int, genesisTime string, rng *am
 	edSgn := signing.NewEdSigner()
 	pub := edSgn.PublicKey()
 
-	vrfPriv, vrfPub := BLS381.GenKeyPair(rng)
+	//rng := amcl.NewRAND()
+	//pub := app.edSgn.PublicKey().Bytes()
+	//rng.Seed(len(pub), app.edSgn.Sign(pub)) // assuming ed.private is random, the sig can be used as seed
+	//vrfPriv, vrfPub := BLS381.GenKeyPair(rng)
+
+	vrfPub, vrfPriv, err := ed25519.GenerateKey(nil)
+
 	vrfSigner := BLS381.NewBlsSigner(vrfPriv)
 	nodeID := types.NodeId{Key: pub.String(), VRFPublicKey: vrfPub}
 

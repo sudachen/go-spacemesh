@@ -441,6 +441,7 @@ func (b *Builder) PublishActivationTx(epoch types.EpochId) error {
 		if err != nil {
 			return fmt.Errorf("failed to get current view for layer %v: %v", viewLayer, err)
 		}
+		b.log.Info("added view size %d to atx ", len(view))
 	}
 
 	var activeSetSize uint32

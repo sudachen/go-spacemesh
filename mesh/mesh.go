@@ -352,17 +352,17 @@ func (m *Mesh) AddBlockWithTxs(blk *types.Block, txs []*types.Transaction, atxs 
 	}
 
 	// Store ATXs (atomically, delete the block on failure)
-	if err := m.AtxDB.ProcessAtxs(atxs); err != nil {
-		// Roll back adding the block (delete it)
-		if err := m.blocks.Delete(blk.Id().ToBytes()); err != nil {
-			m.With().Warning("failed to roll back adding a block", log.Err(err), log.BlockId(blk.Id().String()))
-		}
-		return fmt.Errorf("failed to process ATXs: %v", err)
-	}
+	//if err := m.AtxDB.ProcessAtxs(atxs); err != nil {
+	//	// Roll back adding the block (delete it)
+	//	if err := m.blocks.Delete(blk.Id().ToBytes()); err != nil {
+	//		m.With().Warning("failed to roll back adding a block", log.Err(err), log.BlockId(blk.Id().String()))
+	//	}
+	//	return fmt.Errorf("failed to process ATXs: %v", err)
+	//}
 
 	m.SetLatestLayer(blk.Layer())
 	//new block add to orphans
-	m.handleOrphanBlocks(blk)
+	//m.handleOrphanBlocks(blk)
 
 	//invalidate txs and atxs from pool
 	m.invalidateFromPools(&blk.MiniBlock)
@@ -414,11 +414,7 @@ func (m *Mesh) GetUnverifiedLayerBlocks(l types.LayerID) ([]types.BlockID, error
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("could not desirialize layer to id array for layer %d ", l))
 	}
-	arr := make([]types.BlockID, 0, len(blockIds))
-	for _, bid := range blockIds {
-		arr = append(arr, bid)
-	}
-	return arr, nil
+	return blockIds, nil
 }
 
 func (m *Mesh) GetOrphanBlocksBefore(l types.LayerID) ([]types.BlockID, error) {

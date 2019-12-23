@@ -63,7 +63,7 @@ func NewPersistentMeshDB(path string, log log.Log) (*MeshDB, error) {
 
 	ll := &MeshDB{
 		Log:                log,
-		blockCache:         NewBlockCache(100 * layerSize),
+		blockCache:         NewBlockCache(20 * layerSize),
 		blocks:             bdb,
 		layers:             ldb,
 		transactions:       tdb,
@@ -247,11 +247,12 @@ func (m *MeshDB) getBlockBytes(id types.BlockID) ([]byte, error) {
 }
 
 func (m *MeshDB) ContextualValidity(id types.BlockID) (bool, error) {
-	b, err := m.contextualValidity.Get(id.ToBytes())
-	if err != nil {
-		return false, err
-	}
-	return b[0] == 1, nil //bytes to bool
+	return true, nil
+	//b, err := m.contextualValidity.Get(id.ToBytes())
+	//if err != nil {
+	//	return false, err
+	//}
+	//return b[0] == 1, nil //bytes to bool
 }
 
 func (m *MeshDB) SaveContextualValidity(id types.BlockID, valid bool) error {
