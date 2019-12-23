@@ -362,7 +362,7 @@ func (m *Mesh) AddBlockWithTxs(blk *types.Block, txs []*types.Transaction, atxs 
 
 	m.SetLatestLayer(blk.Layer())
 	//new block add to orphans
-	m.handleOrphanBlocks(blk)
+	//m.handleOrphanBlocks(blk)
 
 	//invalidate txs and atxs from pool
 	m.invalidateFromPools(&blk.MiniBlock)

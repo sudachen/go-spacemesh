@@ -233,10 +233,10 @@ func (t *BlockBuilder) createBlock(id types.LayerID, atxID types.AtxId, eligibil
 	//	return nil, err
 	//}
 
-	viewEdges, err := t.meshProvider.GetOrphanBlocksBefore(id)
-	if err != nil {
-		return nil, err
-	}
+	//viewEdges, err := t.meshProvider.GetOrphanBlocksBefore(id)
+	//if err != nil {
+	//	return nil, err
+	//}
 
 	b := types.MiniBlock{
 		BlockHeader: types.BlockHeader{
@@ -247,7 +247,7 @@ func (t *BlockBuilder) createBlock(id types.LayerID, atxID types.AtxId, eligibil
 			Coin:             t.weakCoinToss.GetResult(),
 			Timestamp:        time.Now().UnixNano(),
 			BlockVotes:       nil,
-			ViewEdges:        viewEdges,
+			ViewEdges:        nil,
 		},
 		AtxIds: selectAtxs(atxids, t.atxsPerBlock),
 		TxIds:  txids,
