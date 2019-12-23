@@ -429,7 +429,7 @@ func (m *Mesh) GetOrphanBlocksBefore(l types.LayerID) ([]types.BlockID, error) {
 	//	}
 	//}
 
-	blocks, err := m.GetUnverifiedLayerBlocks(l - 1)
+	blocks, err := m.GetUnverifiedLayerBlocks(0)
 	if err != nil {
 		return nil, errors.New(fmt.Sprint("failed getting latest layer ", err))
 	}
