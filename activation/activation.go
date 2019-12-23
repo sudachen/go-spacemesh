@@ -436,11 +436,12 @@ func (b *Builder) PublishActivationTx(epoch types.EpochId) error {
 	viewLayer := pubEpoch.FirstLayer(b.layersPerEpoch)
 	var view []types.BlockID
 	if viewLayer > 0 {
-		//var err error
-		//view, err = b.mesh.GetOrphanBlocksBefore(viewLayer)
-		//if err != nil {
-		//	return fmt.Errorf("failed to get current view for layer %v: %v", viewLayer, err)
-		//}
+		var err error
+		view, err = b.mesh.GetOrphanBlocksBefore(viewLayer)
+		if err != nil {
+			return fmt.Errorf("failed to get current view for layer %v: %v", viewLayer, err)
+		}
+		b.log.Info("added view size %d to atx ", len(view))
 	}
 
 	var activeSetSize uint32
