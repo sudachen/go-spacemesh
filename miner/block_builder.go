@@ -40,6 +40,7 @@ type TxValidator interface {
 
 type AtxValidator interface {
 	SyntacticallyValidateAtx(atx *types.ActivationTx) error
+	ProcessAtx(atxs *types.ActivationTx) error
 }
 
 type Syncer interface {
@@ -380,17 +381,17 @@ func (t *BlockBuilder) handleGossipAtx(data service.GossipMessage) {
 	id := atx.Id()
 	events.Publish(events.NewAtx{Id: id.Hash32().String()})
 
-	err = t.atxValidator.SyntacticallyValidateAtx(atx)
-	events.Publish(events.ValidAtx{Id: atx.ShortString(), Valid: err == nil})
-	if err != nil {
-		t.Warning("received syntactically invalid ATX %v: %v", atx.ShortString(), err)
-		// TODO: blacklist peer
-		return
-	}
+	//err = t.atxValidator.SyntacticallyValidateAtx(atx)
+	//events.Publish(events.ValidAtx{Id: atx.ShortString(), Valid: err == nil})
+	////if err != nil {
+	//	t.Warning("received syntactically invalid ATX %v: %v", atx.ShortString(), err)
+	//	// TODO: blacklist peer
+	//	return
+	//}
 
-	t.AtxPool.Put(atx)
 	data.ReportValidation(activation.AtxProtocol)
 	t.With().Info("stored and propagated new syntactically valid ATX", log.AtxId(atx.ShortString()))
+	t.atxValidator.ProcessAtx(atx)
 }
 
 func (t *BlockBuilder) acceptBlockData() {
