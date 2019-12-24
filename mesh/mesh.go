@@ -420,34 +420,34 @@ func (m *Mesh) GetUnverifiedLayerBlocks(l types.LayerID) ([]types.BlockID, error
 func (m *Mesh) GetOrphanBlocksBefore(l types.LayerID) ([]types.BlockID, error) {
 	m.orphMutex.RLock()
 	defer m.orphMutex.RUnlock()
-	ids := map[types.BlockID]struct{}{}
-	for key, val := range m.orphanBlocks {
-		if key < l {
-			for bid := range val {
-				ids[bid] = struct{}{}
-			}
-		}
-	}
+	//ids := map[types.BlockID]struct{}{}
+	//for key, val := range m.orphanBlocks {
+	//	if key < l {
+	//		for bid := range val {
+	//			ids[bid] = struct{}{}
+	//		}
+	//	}
+	//}
 
-	blocks, err := m.GetUnverifiedLayerBlocks(l - 1)
+	blocks, err := m.GetUnverifiedLayerBlocks(0)
 	if err != nil {
 		return nil, errors.New(fmt.Sprint("failed getting latest layer ", err))
 	}
 
 	//add last layer blocks
-	for _, b := range blocks {
-		ids[b] = struct{}{}
-	}
+	//for _, b := range blocks {
+	//	ids[b] = struct{}{}
+	//}
+	//
+	//idArr := make([]types.BlockID, 0, len(ids))
+	//for i := range ids {
+	//	idArr = append(idArr, i)
+	//}
 
-	idArr := make([]types.BlockID, 0, len(ids))
-	for i := range ids {
-		idArr = append(idArr, i)
-	}
+	blocks = types.SortBlockIds(blocks)
 
-	idArr = types.SortBlockIds(idArr)
-
-	m.Info("orphans for layer %d are %v", l, idArr)
-	return idArr, nil
+	m.Info("orphans for layer %d are %v", l, blocks)
+	return blocks, nil
 }
 
 func (m *Mesh) AccumulateRewards(rewardLayer types.LayerID, params Config) {
