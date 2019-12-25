@@ -209,9 +209,10 @@ func (s *Syncer) run() {
 		case layer := <-s.LayerCh:
 			s.currentLayerMutex.Lock()
 			s.currentLayer = layer
+			s.Mesh.SetLatestLayer(layer)
 			s.currentLayerMutex.Unlock()
 			s.Debug("sync got tick for layer %v", layer)
-			go syncRoutine()
+			//go syncRoutine()
 		}
 	}
 }
@@ -287,8 +288,9 @@ func (s *Syncer) Synchronise() {
 
 		lyr, err := s.GetLayer(currentSyncLayer)
 		if err != nil {
-			s.Panic("failed getting layer even though we are weakly-synced currentLayer=%v lastTicked=%v err=%v ", currentSyncLayer, s.lastTickedLayer(), err)
+			//s.Panic("failed getting layer even though we are weakly-synced currentLayer=%v lastTicked=%v err=%v ", currentSyncLayer, s.lastTickedLayer(), err)
 			return
+
 		}
 		s.lValidator.ValidateLayer(lyr) // wait for layer validation
 		return
@@ -456,9 +458,9 @@ func validateUniqueTxAtx(b *types.Block) error {
 
 func (s *Syncer) blockSyntacticValidation(block *types.Block) ([]*types.Transaction, []*types.ActivationTx, error) {
 	// validate unique tx atx
-	//if err := s.fastValidation(block); err != nil {
-	//	return nil, nil, err
-	//}
+	if err := s.fastValidation(block); err != nil {
+		return nil, nil, err
+	}
 
 	//data availability
 	//txs, atxs, err := s.DataAvailability(block)
