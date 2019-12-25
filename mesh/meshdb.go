@@ -88,7 +88,7 @@ func (m *MeshDB) PersistentData() bool {
 func NewMemMeshDB(log log.Log) *MeshDB {
 	ll := &MeshDB{
 		Log:                log,
-		blockCache:         NewBlockCache(100 * layerSize),
+		blockCache:         NewBlockCache(20 * layerSize),
 		blocks:             database.NewMemDatabase(),
 		layers:             database.NewMemDatabase(),
 		general:            database.NewMemDatabase(),
