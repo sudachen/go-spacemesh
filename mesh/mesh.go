@@ -403,6 +403,11 @@ func (m *Mesh) handleOrphanBlocks(blk *types.Block) {
 			}
 		}
 	}
+	size:=0
+	for _,a:= range m.orphanBlocks{
+		size+=size+len(a)
+	}
+	m.Info("size of orphans is %d",size)
 }
 
 func (m *Mesh) GetUnverifiedLayerBlocks(l types.LayerID) ([]types.BlockID, error) {
