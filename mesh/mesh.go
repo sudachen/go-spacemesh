@@ -362,7 +362,7 @@ func (m *Mesh) AddBlockWithTxs(blk *types.Block, txs []*types.Transaction, atxs 
 
 	m.SetLatestLayer(blk.Layer())
 	//new block add to orphans
-	m.handleOrphanBlocks(blk)
+	//m.handleOrphanBlocks(blk)
 
 	//invalidate txs and atxs from pool
 	m.invalidateFromPools(&blk.MiniBlock)
@@ -403,11 +403,11 @@ func (m *Mesh) handleOrphanBlocks(blk *types.Block) {
 			}
 		}
 	}
-	size:=0
-	for _,a:= range m.orphanBlocks{
-		size+=size+len(a)
+	size := 0
+	for _, a := range m.orphanBlocks {
+		size += size + len(a)
 	}
-	m.Info("size of orphans is %d",size)
+	m.Info("size of orphans is %d", size)
 }
 
 func (m *Mesh) GetUnverifiedLayerBlocks(l types.LayerID) ([]types.BlockID, error) {
