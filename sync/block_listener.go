@@ -95,19 +95,19 @@ func (bl *BlockListener) handleBlock(data service.GossipMessage) {
 		bl.With().Info("we already know this block", log.BlockId(blk.Id().String()))
 		return
 	}
-	//_, _, err = bl.blockSyntacticValidation(blk)
-	//if err != nil {
-	//	bl.With().Error("failed to validate block", log.BlockId(blk.Id().String()), log.Err(err))
-	//	return
-	//}
-	//data.ReportValidation(config.NewBlockProtocol)
+	_, _, err = bl.blockSyntacticValidation(blk)
+	if err != nil {
+		bl.With().Error("failed to validate block", log.BlockId(blk.Id().String()), log.Err(err))
+		return
+	}
+	data.ReportValidation(config.NewBlockProtocol)
 	if err := bl.AddBlockWithTxs(blk, nil, nil); err != nil {
 		bl.With().Error("failed to add block to database", log.BlockId(blk.Id().String()), log.Err(err))
 		return
 	}
-	//
-	//if blk.Layer() <= bl.ValidatedLayer() {
-	//	bl.Syncer.HandleLateBlock(blk)
-	//}
+
+	if blk.Layer() <= bl.ValidatedLayer() {
+		bl.Syncer.HandleLateBlock(blk)
+	}
 	return
 }
