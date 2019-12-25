@@ -414,11 +414,7 @@ func (m *Mesh) GetUnverifiedLayerBlocks(l types.LayerID) ([]types.BlockID, error
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("could not desirialize layer to id array for layer %d ", l))
 	}
-	arr := make([]types.BlockID, 0, len(blockIds))
-	for _, bid := range blockIds {
-		arr = append(arr, bid)
-	}
-	return arr, nil
+	return blockIds, nil
 }
 
 func (m *Mesh) GetOrphanBlocksBefore(l types.LayerID) ([]types.BlockID, error) {
