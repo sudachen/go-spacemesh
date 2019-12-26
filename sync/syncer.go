@@ -268,6 +268,9 @@ func (s *Syncer) lastTickedLayer() types.LayerID {
 
 func (s *Syncer) Synchronise() {
 	defer s.syncRoutineWg.Done()
+
+	return
+
 	s.Info("start synchronize")
 	if s.lastTickedLayer() <= 1 { // skip validation for first layer
 		s.With().Info("Not syncing in layer <= 1", log.LayerId(uint64(s.lastTickedLayer())))
