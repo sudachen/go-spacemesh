@@ -269,8 +269,6 @@ func (s *Syncer) lastTickedLayer() types.LayerID {
 func (s *Syncer) Synchronise() {
 	defer s.syncRoutineWg.Done()
 
-	return
-
 	s.Info("start synchronize")
 	if s.lastTickedLayer() <= 1 { // skip validation for first layer
 		s.With().Info("Not syncing in layer <= 1", log.LayerId(uint64(s.lastTickedLayer())))
@@ -284,6 +282,8 @@ func (s *Syncer) Synchronise() {
 		s.setGossipBufferingStatus(Done) // fully-synced, make sure we listen to p2p
 		return
 	}
+
+	return
 
 	if s.weaklySynced() { // we have all the data of the prev layers so we can simply validate
 		s.With().Info("Node is synced. Going to validate layer", log.LayerId(uint64(currentSyncLayer)))
