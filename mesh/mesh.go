@@ -168,7 +168,7 @@ func (m *Mesh) ValidateLayer(lyr *types.Layer) {
 	currLayerId := lyr.Index()
 	m.Info("Validate layer %d", currLayerId)
 
-	oldPbase, newPbase := m.HandleIncomingLayer(lyr)
+	_, _ = m.HandleIncomingLayer(lyr)
 	m.lvMutex.Lock()
 	m.validatedLayer = currLayerId
 	m.validatedLayer = lyr.Index()
@@ -177,13 +177,13 @@ func (m *Mesh) ValidateLayer(lyr *types.Layer) {
 	}
 	m.lvMutex.Unlock()
 
-	for layerId := oldPbase; layerId < newPbase; layerId++ {
-		m.AccumulateRewards(layerId, m.config)
-		if err := m.PushTransactions(layerId); err != nil {
-			m.With().Error("failed to push transactions", log.Err(err))
-			break
-		}
-	}
+	//for layerId := oldPbase; layerId < newPbase; layerId++ {
+	//	m.AccumulateRewards(layerId, m.config)
+	//	if err := m.PushTransactions(layerId); err != nil {
+	//		m.With().Error("failed to push transactions", log.Err(err))
+	//		break
+	//	}
+	//}
 	m.Info("done validating layer %v", currLayerId)
 }
 
@@ -403,11 +403,11 @@ func (m *Mesh) handleOrphanBlocks(blk *types.Block) {
 			}
 		}
 	}
-	size:=0
-	for _,a:= range m.orphanBlocks{
-		size+=size+len(a)
+	size := 0
+	for _, a := range m.orphanBlocks {
+		size += size + len(a)
 	}
-	m.Info("size of orphans is %d",size)
+	m.Info("size of orphans is %d", size)
 }
 
 func (m *Mesh) GetUnverifiedLayerBlocks(l types.LayerID) ([]types.BlockID, error) {
