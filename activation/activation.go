@@ -444,14 +444,15 @@ func (b *Builder) PublishActivationTx(epoch types.EpochId) error {
 	}
 
 	var activeSetSize uint32
-	if pubEpoch > 0 {
-		var err error
-		b.log.With().Info("calculating active ids")
-		activeSetSize, err = b.db.CalcActiveSetFromView(view, pubEpoch)
-		if err != nil {
-			return fmt.Errorf("failed to calculate activeset: %v", err)
-		}
+	//if pubEpoch > 0 {
+	var err error
+	b.log.With().Info("calculating active ids")
+	activeSetSize, err = b.db.CalcActiveSetFromView(view, pubEpoch)
+	if err != nil {
+		return fmt.Errorf("failed to calculate activeset: %v", err)
 	}
+	//}
+
 	if activeSetSize == 0 && !targetEpoch.IsGenesis() {
 		return fmt.Errorf("empty active set size found! epochId: %v, len(view): %d, view: %v",
 			pubEpoch, len(view), view)
