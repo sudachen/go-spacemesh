@@ -186,10 +186,10 @@ func (m *MeshDB) ForBlockInView(view map[types.BlockID]struct{}, layer types.Lay
 	}
 	seenBlocks := make(map[types.BlockID]struct{})
 	for blocksToVisit.Len() > 0 {
-		bid:=blocksToVisit.Remove(blocksToVisit.Front())
+		bid := blocksToVisit.Remove(blocksToVisit.Front())
 		block, err := m.GetBlock(bid.(types.BlockID))
 		if err != nil {
-			return fmt.Errorf("failed for %s %s",bid,err)
+			return fmt.Errorf("failed for %s %s", bid, err)
 		}
 
 		//catch blocks that were referenced after more than one layer, and slipped through the stop condition
@@ -248,6 +248,8 @@ func (m *MeshDB) getBlockBytes(id types.BlockID) ([]byte, error) {
 }
 
 func (m *MeshDB) ContextualValidity(id types.BlockID) (bool, error) {
+	return true, nil
+
 	b, err := m.contextualValidity.Get(id.ToBytes())
 	if err != nil {
 		return false, err
@@ -256,6 +258,8 @@ func (m *MeshDB) ContextualValidity(id types.BlockID) (bool, error) {
 }
 
 func (m *MeshDB) SaveContextualValidity(id types.BlockID, valid bool) error {
+	return nil
+
 	var v []byte
 	if valid {
 		v = TRUE
