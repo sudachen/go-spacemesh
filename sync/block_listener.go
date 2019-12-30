@@ -4,6 +4,7 @@ import (
 	"github.com/spacemeshos/go-spacemesh/common/types"
 	"github.com/spacemeshos/go-spacemesh/config"
 	"github.com/spacemeshos/go-spacemesh/log"
+	"github.com/spacemeshos/go-spacemesh/mesh"
 	"github.com/spacemeshos/go-spacemesh/p2p/service"
 	"github.com/spacemeshos/go-spacemesh/priorityq"
 	"sync"
@@ -100,7 +101,7 @@ func (bl *BlockListener) handleBlock(data service.GossipMessage) {
 		return
 	}
 	data.ReportValidation(config.NewBlockProtocol)
-	if err := bl.AddBlockWithTxs(&blk, txs, atxs); err != nil {
+	if err := bl.AddBlockWithTxs(&blk, txs, atxs); err != nil && err != mesh.ErrAlreadyExist {
 		bl.With().Error("failed to add block to database", log.BlockId(blk.Id().String()), log.Err(err))
 		return
 	}
