@@ -418,6 +418,7 @@ func (s *Syncer) syncLayer(layerID types.LayerID, blockIds []types.BlockID) ([]*
 		return nil
 	}
 
+	tmr := newMilliTimer(syncLayerTime)
 	if res, err := s.blockQueue.addDependencies(layerID, blockIds, foo); res == false {
 		return s.LayerBlocks(layerID)
 	} else if err != nil {
@@ -428,6 +429,7 @@ func (s *Syncer) syncLayer(layerID types.LayerID, blockIds []types.BlockID) ([]*
 	if result := <-ch; !result {
 		return nil, fmt.Errorf("could not get all blocks for layer  %v", layerID)
 	}
+	tmr.ObserveDuration()
 
 	return s.LayerBlocks(layerID)
 }
