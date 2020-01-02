@@ -23,7 +23,7 @@ func BytesToBlockIds(blockIds []byte) ([]BlockID, error) {
 
 func BytesAsAtx(b []byte) (*ActivationTx, error) {
 	var atx ActivationTx
-	err := BytesToInterface(b, atx)
+	err := BytesToInterface(b, &atx)
 	return &atx, err
 }
 
@@ -37,7 +37,7 @@ func NIPSTChallengeAsBytes(challenge *NIPSTChallenge) ([]byte, error) {
 
 func BytesAsTransaction(buf []byte) (*Transaction, error) {
 	b := Transaction{}
-	err := BytesToInterface(buf, b)
+	err := BytesToInterface(buf, &b)
 	return &b, err
 }
 
