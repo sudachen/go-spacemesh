@@ -116,9 +116,9 @@ func (b *Block) Id() BlockID {
 
 //should be used after all changed to a block are done
 func (b *Block) CalcAndSetId() {
-	blockBytes, err := InterfaceToBytes(b.MiniBlock)
+	blockBytes, err := InterfaceToBytes(&b.MiniBlock)
 	if err != nil {
-		panic("failed to marshal transaction: " + err.Error())
+		panic("failed to marshal : " + err.Error())
 	}
 	b.id = BlockID(CalcHash32(blockBytes))
 }

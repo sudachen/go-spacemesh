@@ -1,6 +1,8 @@
 package activation
 
 import (
+	"bytes"
+	xdr "github.com/nullstyle/go-xdr/xdr3"
 	"github.com/spacemeshos/go-spacemesh/common/types"
 	"github.com/spacemeshos/go-spacemesh/log"
 	"github.com/spacemeshos/go-spacemesh/p2p/service"
@@ -52,10 +54,28 @@ func (l *PoetListener) loop() {
 	}
 }
 
+// ⚠️ Pass the interface by reference
+func BytesToInterface(buf []byte, i interface{}) error {
+	_, err := xdr.Unmarshal(bytes.NewReader(buf), i)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// ⚠️ Pass the interface by reference
+func InterfaceToBytes(i interface{}) ([]byte, error) {
+	var w bytes.Buffer
+	if _, err := xdr.Marshal(&w, &i); err != nil {
+		return nil, err
+	}
+	return w.Bytes(), nil
+}
+
 func (l *PoetListener) handlePoetProofMessage(gossipMessage service.GossipMessage) {
 	// ⚠️ IMPORTANT: We must not ensure that the node is synced! PoET messages must be propagated regardless.
 	var proofMessage types.PoetProofMessage
-	if err := types.BytesToInterface(gossipMessage.Bytes(), &proofMessage); err != nil {
+	if err := BytesToInterface(gossipMessage.Bytes(), &proofMessage); err != nil {
 		l.Log.Error("failed to unmarshal PoET membership proof: %v", err)
 		return
 	}

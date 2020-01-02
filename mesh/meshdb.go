@@ -186,10 +186,10 @@ func (m *MeshDB) ForBlockInView(view map[types.BlockID]struct{}, layer types.Lay
 	}
 	seenBlocks := make(map[types.BlockID]struct{})
 	for blocksToVisit.Len() > 0 {
-		bid:=blocksToVisit.Remove(blocksToVisit.Front())
+		bid := blocksToVisit.Remove(blocksToVisit.Front())
 		block, err := m.GetBlock(bid.(types.BlockID))
 		if err != nil {
-			return fmt.Errorf("failed for %s %s",bid,err)
+			return fmt.Errorf("failed for %s %s", bid, err)
 		}
 
 		//catch blocks that were referenced after more than one layer, and slipped through the stop condition
@@ -294,6 +294,7 @@ func (m *MeshDB) updateLayerWithBlock(blk *types.Block) error {
 		//layer doesnt exist, need to insert new layer
 		blockIds = make([]types.BlockID, 0, 1)
 	} else {
+		log.Info("len ids %d", len(ids))
 		blockIds, err = types.BytesToBlockIds(ids)
 		if err != nil {
 			return errors.New("could not get all blocks from database ")

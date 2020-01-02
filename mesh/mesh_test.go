@@ -149,6 +149,19 @@ func TestLayers_AddBlock(t *testing.T) {
 	assert.True(t, len(rBlock1.AtxIds) == len(block1.AtxIds))
 }
 
+func TestLayers_sir(t *testing.T) {
+	block1 := types.NewExistingBlock(1, []byte("data1"))
+	blockIds := make([]types.BlockID, 0, 1)
+	blockIds = append(blockIds, block1.Id())
+
+	byts, err := types.InterfaceToBytes(blockIds)
+	assert.NoError(t, err)
+	blockIds2, err := types.BytesToBlockIds(byts)
+	assert.NoError(t, err)
+	t.Log("", blockIds2)
+
+}
+
 func TestLayers_AddLayer(t *testing.T) {
 	r := require.New(t)
 

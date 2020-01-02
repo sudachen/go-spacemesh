@@ -1,10 +1,8 @@
 package state
 
 import (
-	"bytes"
 	"container/list"
 	"fmt"
-	xdr "github.com/nullstyle/go-xdr/xdr3"
 	"github.com/spacemeshos/ed25519"
 	"github.com/spacemeshos/go-spacemesh/common/types"
 	"github.com/spacemeshos/go-spacemesh/common/util"
@@ -64,13 +62,12 @@ func PublicKeyToAccountAddress(pub ed25519.PublicKey) types.Address {
 // Validate the signature by extracting the source account and validating its existence.
 // Return the src acount address and error in case of failure
 func (tp *TransactionProcessor) ValidateSignature(s types.Signed) (types.Address, error) { // TODO: never used
-	var w bytes.Buffer
-	_, err := xdr.Marshal(&w, s.Data())
+	w, err := types.InterfaceToBytes(s.Data())
 	if err != nil {
 		return types.Address{}, err
 	}
 
-	pubKey, err := ed25519.ExtractPublicKey(w.Bytes(), s.Sig())
+	pubKey, err := ed25519.ExtractPublicKey(w, s.Sig())
 	if err != nil {
 		return types.Address{}, err
 	}
