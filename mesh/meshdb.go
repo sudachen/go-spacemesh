@@ -294,7 +294,6 @@ func (m *MeshDB) updateLayerWithBlock(blk *types.Block) error {
 		//layer doesnt exist, need to insert new layer
 		blockIds = make([]types.BlockID, 0, 1)
 	} else {
-		log.Info("len ids %d", len(ids))
 		blockIds, err = types.BytesToBlockIds(ids)
 		if err != nil {
 			return errors.New("could not get all blocks from database ")
