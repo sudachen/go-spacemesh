@@ -169,7 +169,7 @@ func (m *Mesh) ValidateLayer(lyr *types.Layer) {
 
 	oldPbase, newPbase := m.HandleIncomingLayer(lyr)
 	//oldPbase, newPbase := lyr.Index()-2, lyr.Index()-1
-	//m.Info("old_pbase, new_pbase: %v, %v", oldPbase, newPbase)
+	m.Info("old_pbase, new_pbase: %v, %v", oldPbase, newPbase)
 	m.lvMutex.Lock()
 	m.validatedLayer = lyr.Index()
 	if err := m.general.Put(VALIDATED, lyr.Index().ToBytes()); err != nil {
