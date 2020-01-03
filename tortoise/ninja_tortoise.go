@@ -150,7 +150,7 @@ func (ni *NinjaTortoise) PersistTortoise() error {
 		return err
 	}
 	return ni.Persist(mesh.TORTOISE, ni.ninjaTortoise)
-	return nil
+	//return nil
 }
 
 func (ni *NinjaTortoise) RecoverTortoise() (interface{}, error) {
