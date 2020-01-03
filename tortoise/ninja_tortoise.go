@@ -84,7 +84,7 @@ type ninjaTortoise struct {
 	Evict        types.LayerID
 	AvgLayerSize int
 	PBase        votingPattern
-	Patterns     map[types.LayerID][]votingPattern                 //map Patterns by layer for eviction purposes
+	Patterns     map[types.LayerID]map[votingPattern]struct{}      //map Patterns by layer for eviction purposes
 	TEffective   map[types.BlockID]votingPattern                   //Explicit voting pattern of latest layer for a block
 	TCorrect     map[types.BlockID]map[types.BlockID]vec           //correction vectors
 	TExplicit    map[types.BlockID]map[types.LayerID]votingPattern //explict votes from block to layer pattern
@@ -112,7 +112,7 @@ func NewNinjaTortoise(layerSize int, blocks Mesh, hdist int, log log.Log) *Ninja
 		AvgLayerSize: layerSize,
 		PBase:        ZeroPattern,
 
-		Patterns:   map[types.LayerID][]votingPattern{},
+		Patterns:   map[types.LayerID]map[votingPattern]struct{}{},
 		TGood:      map[types.LayerID]votingPattern{},
 		TEffective: map[types.BlockID]votingPattern{},
 		TCorrect:   map[types.BlockID]map[types.BlockID]vec{},
@@ -168,7 +168,7 @@ func (ni *NinjaTortoise) evictOutOfPbase() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for _, p := range ni.Patterns[lyr] {
+			for p, _ := range ni.Patterns[lyr] {
 				delete(ni.TSupport, p)
 				delete(ni.TComplete, p)
 				delete(ni.TEffectiveToBlocks, p)
@@ -241,8 +241,10 @@ func (ni *NinjaTortoise) processBlock(b *types.Block) {
 
 		vp := votingPattern{id: getIdsFromSet(v), LayerID: layerId}
 		ni.TPattern[vp] = v
-		arr, _ := ni.Patterns[vp.Layer()]
-		ni.Patterns[vp.Layer()] = append(arr, vp)
+		if _, ok := ni.Patterns[vp.Layer()]; !ok {
+			ni.Patterns[vp.Layer()] = make(map[votingPattern]struct{})
+		}
+		ni.Patterns[vp.Layer()][vp] = struct{}{}
 		ni.TExplicit[b.Id()][layerId] = vp
 
 		if layerId >= effective.Layer() {
