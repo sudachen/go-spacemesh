@@ -1,7 +1,12 @@
 # Inspired by https://container-solutions.com/faster-builds-in-docker-with-go-1-11/
 # Base build image
-FROM golang:1.11.9-alpine3.8 AS build_base
-RUN apk add bash make git curl unzip rsync libc6-compat gcc musl-dev
+FROM golang:1.13.5-alpine3.11 AS build_base
+RUN apk add bash make git curl unzip rsync  gcc musl-dev
+RUN apk --no-cache add ca-certificates wget
+RUN wget -q -O /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub
+RUN wget https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.30-r0/glibc-2.30-r0.apk
+RUN apk add glibc-2.30-r0.apk
+
 WORKDIR /go/src/github.com/spacemeshos/go-spacemesh
 
 # Force the go compiler to use modules
