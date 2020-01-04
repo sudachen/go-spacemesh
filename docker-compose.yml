@@ -5,7 +5,7 @@ services:
      container_name: go-spacemesh
      command: [
           "--tcp-port", "${SMESH_PORT:-7513}",
-          "--coinbase", "0x1234",
+          "--coinbase", "${SMESH_COINBASE:-0x1234}",
           "--poet-server", "${SMESH_POET_SERVER:?SMESH_POET_SERVER Must be specified}",
           "--post-space", "${SMESH_POST_SPACE:-8589934592}",
           "--test-mode",
@@ -27,15 +27,27 @@ services:
           "--genesis-time", "${SMESH_GENESIS_TIME:?SMESH_GENESIS_TIME Must be specified}",
           "--bootstrap", 
           "--bootnodes", "${SMESH_BOOTNODES:?SMESH_BOOTNODES Must be specified}",
+          "--grpc-server",
+          "--json-server",
+          "--json-port", "${SMESH_JSON_PORT:-9090}",
           "--executable-path", "/bin/go-spacemesh",
-          "-d", "~/spacemeshdata/" ]
+          "-d", "/root/spacemeshdata/" ]
      ports:
         - "${SMESH_PORT:-7513}:${SMESH_PORT:-7513}"
+        - "${SMESH_JSON_PORT:-9090}:${SMESH_JSON_PORT:-9090}"
+     networks:
+       spacemesh: {}
+       
+     volumes:
+        - "${SMESH_HOST_DATA_PATH:-smesh-data}:/root"
 
 
+volumes:
+  smesh-data:
+        
 # Specify network interface name to make firewall rules easier.
 networks:
   spacemesh:
     driver: bridge
     driver_opts:
-      com.docker.network.bridge.name: "docker-spacemesh"
+      com.docker.network.bridge.name: "docker-smesh"
