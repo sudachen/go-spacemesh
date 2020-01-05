@@ -8,7 +8,6 @@ import (
 	"github.com/spacemeshos/go-spacemesh/mesh"
 	"hash/fnv"
 	"math"
-	"runtime"
 	"sync"
 	"time"
 )
@@ -151,7 +150,7 @@ func (ni *NinjaTortoise) PersistTortoise() error {
 		return err
 	}
 	return ni.Persist(mesh.TORTOISE, ni.ninjaTortoise)
-	return nil
+	//return nil
 }
 
 func (ni *NinjaTortoise) RecoverTortoise() (interface{}, error) {
@@ -264,7 +263,19 @@ func (ni *NinjaTortoise) restartMaps() {
 		newTexplicityMap[k] = v
 	}
 	ni.TExplicit = newTexplicityMap
-	runtime.GC()
+
+	newTGoodMap := map[types.LayerID]votingPattern{}
+	for k, v := range ni.TGood {
+		newTGoodMap[k] = v
+	}
+	ni.TGood = newTGoodMap
+
+	newPatternsMap := map[types.LayerID][]votingPattern{}
+	for k, v := range ni.Patterns {
+		newPatternsMap[k] = v
+	}
+	ni.Patterns = newPatternsMap
+	//runtime.GC()
 }
 
 func (ni *NinjaTortoise) processBlock(b *types.Block) {
