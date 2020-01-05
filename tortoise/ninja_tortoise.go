@@ -162,7 +162,6 @@ func (ni *NinjaTortoise) evictOutOfPbase() {
 	if ni.PBase == ZeroPattern || ni.PBase.Layer() <= ni.Hdist {
 		return
 	}
-
 	window := ni.PBase.Layer() - ni.Hdist
 	for lyr := ni.Evict; lyr < window; lyr++ {
 		wg.Add(1)
@@ -199,6 +198,73 @@ func (ni *NinjaTortoise) evictOutOfPbase() {
 		wg.Wait()
 	}
 	ni.Evict = window
+	if ni.PBase.LayerID%50 == 0 {
+		ni.restartMaps()
+	}
+
+}
+
+func (ni *NinjaTortoise) restartMaps() {
+	newTsupportMap := map[votingPattern]int{}
+	for k, v := range ni.TSupport {
+		newTsupportMap[k] = v
+	}
+	ni.TSupport = newTsupportMap
+
+	newTcompleteMap := map[votingPattern]struct{}{}
+	for k, v := range ni.TComplete {
+		newTcompleteMap[k] = v
+	}
+	ni.TComplete = newTcompleteMap
+
+	newTEffectiveToBlocksMap := map[votingPattern][]types.BlockID{}
+	for k, v := range ni.TEffectiveToBlocks {
+		newTEffectiveToBlocksMap[k] = v
+	}
+	ni.TEffectiveToBlocks = newTEffectiveToBlocksMap
+
+	newTvoteMap := map[votingPattern]map[types.BlockID]vec{}
+	for k, v := range ni.TVote {
+		newTvoteMap[k] = v
+	}
+	ni.TVote = newTvoteMap
+
+	newTtallyMap := map[votingPattern]map[types.BlockID]vec{}
+	for k, v := range ni.TTally {
+		newTtallyMap[k] = v
+	}
+	ni.TTally = newTtallyMap
+
+	newTPatternMap := map[votingPattern]map[types.BlockID]struct{}{}
+	for k, v := range ni.TPattern {
+		newTPatternMap[k] = v
+	}
+	ni.TPattern = newTPatternMap
+
+	newTpatSupportMap := map[votingPattern]map[types.LayerID]votingPattern{}
+	for k, v := range ni.TPatSupport {
+		newTpatSupportMap[k] = v
+	}
+	ni.TPatSupport = newTpatSupportMap
+
+	newTEffectiveMap := map[types.BlockID]votingPattern{}
+	for k, v := range ni.TEffective {
+		newTEffectiveMap[k] = v
+	}
+	ni.TEffective = newTEffectiveMap
+
+	newTcorrectMap := map[types.BlockID]map[types.BlockID]vec{}
+	for k, v := range ni.TCorrect {
+		newTcorrectMap[k] = v
+	}
+	ni.TCorrect = newTcorrectMap
+
+	newTexplicityMap := map[types.BlockID]map[types.LayerID]votingPattern{}
+	for k, v := range ni.TExplicit {
+		newTexplicityMap[k] = v
+	}
+	ni.TExplicit = newTexplicityMap
+
 }
 
 func (ni *NinjaTortoise) processBlock(b *types.Block) {
