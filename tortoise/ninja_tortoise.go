@@ -8,6 +8,7 @@ import (
 	"github.com/spacemeshos/go-spacemesh/mesh"
 	"hash/fnv"
 	"math"
+	"runtime"
 	"sync"
 	"time"
 )
@@ -158,6 +159,7 @@ func (ni *NinjaTortoise) RecoverTortoise() (interface{}, error) {
 }
 
 func (ni *NinjaTortoise) evictOutOfPbase() {
+	ni.Info("evict maps")
 	wg := sync.WaitGroup{}
 	if ni.PBase == ZeroPattern || ni.PBase.Layer() <= ni.Hdist {
 		return
@@ -198,13 +200,11 @@ func (ni *NinjaTortoise) evictOutOfPbase() {
 		wg.Wait()
 	}
 	ni.Evict = window
-	if ni.PBase.LayerID%50 == 0 {
-		ni.restartMaps()
-	}
-
+	ni.restartMaps()
 }
 
 func (ni *NinjaTortoise) restartMaps() {
+	ni.Info("restart maps")
 	newTsupportMap := map[votingPattern]int{}
 	for k, v := range ni.TSupport {
 		newTsupportMap[k] = v
@@ -264,7 +264,7 @@ func (ni *NinjaTortoise) restartMaps() {
 		newTexplicityMap[k] = v
 	}
 	ni.TExplicit = newTexplicityMap
-
+	runtime.GC()
 }
 
 func (ni *NinjaTortoise) processBlock(b *types.Block) {
