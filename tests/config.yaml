@@ -30,7 +30,7 @@ bootstrap:
     layer-duration-sec: '10'
     layer-average-size: '20'
     hare-wakeup-delta: '5'
-    layers-per-epoch: '625
+    layers-per-epoch: '25'
     coinbase: '0x4321'
     eligibility-confidence-param: '140'
     eligibility-epoch-offset: '0'
