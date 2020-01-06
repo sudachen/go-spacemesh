@@ -167,12 +167,11 @@ func (tp *TransactionProcessor) ApplyRewards(layer types.LayerID, miners []types
 		events.Publish(events.RewardReceived{Coinbase: account.String(), Amount: reward.Uint64()})
 	}
 	newHash, err := tp.globalState.Commit(false)
-
 	if err != nil {
 		tp.Log.Error("db write error %v", err)
 		return
 	}
-
+	tp.Log.Info("new state root after reward for layer %v is %x", layer, newHash)
 	tp.addStateToHistory(layer, newHash)
 }
 
