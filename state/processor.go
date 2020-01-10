@@ -173,6 +173,8 @@ func (tp *TransactionProcessor) ApplyRewards(layer types.LayerID, miners []types
 		return
 	}
 
+	tp.Log.Info("new state root after reward for layer %v is %x", layer, newHash)
+
 	tp.addStateToHistory(layer, newHash)
 }
 
