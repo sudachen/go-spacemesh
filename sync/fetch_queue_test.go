@@ -123,7 +123,7 @@ func TestBlockListener_TestAtxQueue(t *testing.T) {
 	bl2.AddBlockWithTxs(block1, []*types.Transaction{}, []*types.ActivationTx{atx1, atx2, atx3})
 
 	ch := queue.addToPendingGetCh([]types.Hash32{atx1.Hash32(), atx2.Hash32(), atx3.Hash32()})
-	timeout := time.After(1 * time.Second)
+	timeout := time.After(10 * time.Second)
 	select {
 	// Got a timeout! fail with a timeout error
 	case <-timeout:

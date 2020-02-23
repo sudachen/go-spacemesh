@@ -201,12 +201,15 @@ func updateTxDependencies(invalidate func(id types.Hash32, valid bool), txpool T
 		}
 
 		for _, id := range fj.ids {
-			if item, ok := mp[id]; ok {
-				txpool.Put(types.TransactionId(id), item)
-				invalidate(id, true)
-			} else {
-				invalidate(id, false)
-			}
+			go func(id types.Hash32) {
+				if item, ok := mp[id]; ok {
+					txpool.Put(types.TransactionId(id), item)
+					invalidate(id, true)
+				} else {
+					invalidate(id, false)
+				}
+			}(id)
+
 		}
 	}
 }
@@ -266,17 +269,19 @@ func updateAtxDependencies(invalidate func(id types.Hash32, valid bool), sValida
 		}
 
 		for _, id := range fj.ids {
-			if atx, ok := mp[id]; ok {
-				err := sValidateAtx(atx)
-				if err == nil {
-					atxpool.Put(atx)
-					invalidate(id, true)
-					continue
-				} else {
-					log.Info("failed to validate %s %s", id.ShortString(), err)
+			go func(id types.Hash32) {
+				if atx, ok := mp[id]; ok {
+					err := sValidateAtx(atx)
+					if err == nil {
+						atxpool.Put(atx)
+						invalidate(id, true)
+						return
+					} else {
+						log.Info("failed to validate %s %s", id.ShortString(), err)
+					}
 				}
-			}
-			invalidate(id, false)
+				invalidate(id, false)
+			}(id)
 		}
 	}
 
