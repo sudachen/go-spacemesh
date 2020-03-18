@@ -442,7 +442,7 @@ func (m *Mesh) SetZeroBlockLayer(lyr types.LayerID) error {
 	blockIds := make([]types.BlockID, 0, 1)
 	w, err := types.BlockIdsAsBytes(blockIds)
 	if err != nil {
-		return errors.New("could not encode layer blk ids")
+		return errors.New("could not encode empty layer")
 	}
 	m.layers.Put(lyr.ToBytes(), w)
 	return nil
