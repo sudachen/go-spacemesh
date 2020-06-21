@@ -38,11 +38,10 @@ func TestCreateBaseline(t *testing.T) {
 	defer nipstStore.Close()
 	atxdbStore, _ := database.NewLDBDatabase(id+"atx", 0, 0, lg.WithOptions(log.Nop))
 	defer atxdbStore.Close()
-	atxdb := activation.NewDB(atxdbStore, &mockIStore{}, mshdb, uint16(1000), &validatorMock{}, lg.WithName("atxDB").WithOptions(log.Nop))
+	atxdb := activation.NewDB(atxdbStore, &mockIStore{}, nil, mshdb, uint16(1000), &validatorMock{}, lg.WithName("atxDB").WithOptions(log.Nop))
 	trtl := tortoise.NewTortoise(blocksPerLayer, mshdb, 1, lg.WithName("trtl"))
 	msh := mesh.NewMesh(mshdb, atxdb, rewardConf, trtl, &mockTxMemPool{}, &mockAtxMemPool{}, &mockState{}, lg.WithOptions(log.Nop))
 	defer msh.Close()
-	msh.SetBlockBuilder(&blockBuilderMock{})
 	poetDbStore, err := database.NewLDBDatabase(id+"poet", 0, 0, lg.WithName("poetDbStore").WithOptions(log.Nop))
 	if err != nil {
 		lg.Error("error: ", err)
@@ -185,5 +184,5 @@ func newActivationTx(nodeID types.NodeID, sequence uint64, prevATX types.ATXID, 
 		StartTick:      startTick,
 		PositioningATX: positioningATX,
 	}
-	return types.NewActivationTx(nipstChallenge, coinbase, activeSetSize, view, nipst, nil)
+	return types.NewActivationTx(nipstChallenge, coinbase, activeSetSize, nipst, nil)
 }

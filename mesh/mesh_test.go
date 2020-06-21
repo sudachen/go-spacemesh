@@ -67,6 +67,10 @@ func (m *MeshValidatorMock) HandleLateBlock(bl *types.Block) (types.LayerID, typ
 
 type MockState struct{}
 
+func (MockState) ValidateAndAddTxToPool(tx *types.Transaction) error {
+	panic("implement me")
+}
+
 func (MockState) LoadState(types.LayerID) error {
 	panic("implement me")
 }
@@ -352,10 +356,8 @@ func TestMesh_AddBlockWithTxs_PushTransactions_UpdateUnappliedTxs(t *testing.T) 
 
 	state := &MockMapState{}
 	msh.txProcessor = state
-	blockBuilder := &MockBlockBuilder{}
-	msh.SetBlockBuilder(blockBuilder)
 
-	layerID := types.LayerID(1)
+	layerID := types.LayerID(types.GetEffectiveGenesis() + 1)
 	signer, origin := newSignerAndAddress(r, "origin")
 	tx1 := addTxToMesh(r, msh, signer, 2468)
 	tx2 := addTxToMesh(r, msh, signer, 2469)
@@ -374,10 +376,10 @@ func TestMesh_AddBlockWithTxs_PushTransactions_UpdateUnappliedTxs(t *testing.T) 
 		r.Equal(111, int(txns[i].TotalAmount))
 	}
 
-	msh.pushLayersToState(1, 2)
+	msh.pushLayersToState(types.GetEffectiveGenesis()+1, types.GetEffectiveGenesis()+2)
 	r.Equal(4, len(state.Txs))
 
-	r.ElementsMatch(GetTransactionIds(tx5), GetTransactionIds(blockBuilder.txs...))
+	r.ElementsMatch(GetTransactionIds(tx5), GetTransactionIds(state.Pool...))
 
 	txns = getTxns(r, msh.DB, origin)
 	r.Empty(txns)
@@ -390,8 +392,6 @@ func TestMesh_AddBlockWithTxs_PushTransactions_getInvalidBlocksByHare(t *testing
 
 	state := &MockMapState{}
 	msh.txProcessor = state
-	blockBuilder := &MockBlockBuilder{}
-	msh.SetBlockBuilder(blockBuilder)
 
 	layerID := types.LayerID(1)
 	signer, _ := newSignerAndAddress(r, "origin")
@@ -409,7 +409,7 @@ func TestMesh_AddBlockWithTxs_PushTransactions_getInvalidBlocksByHare(t *testing
 	r.ElementsMatch(blocks[2:], invalid)
 
 	msh.reInsertTxsToPool(hareBlocks, invalid, layerID)
-	r.ElementsMatch(GetTransactionIds(tx5), GetTransactionIds(blockBuilder.txs...))
+	r.ElementsMatch(GetTransactionIds(tx5), GetTransactionIds(state.Pool...))
 
 }
 

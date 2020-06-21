@@ -30,6 +30,7 @@ import (
 	"github.com/spacemeshos/go-spacemesh/p2p/service"
 	"github.com/spacemeshos/go-spacemesh/rand"
 	"github.com/spacemeshos/go-spacemesh/signing"
+	"github.com/spacemeshos/go-spacemesh/state"
 	"github.com/spacemeshos/go-spacemesh/timesync"
 )
 
@@ -89,8 +90,8 @@ func SyncMockFactoryManClock(number int, conf Configuration, name string, dbType
 		name := fmt.Sprintf(name+"_%d", i)
 		l := log.New(name, "", "")
 		blockValidator := blockEligibilityValidatorMock{}
-		txpool := miner.NewTxMemPool()
-		atxpool := miner.NewAtxMemPool()
+		txpool := state.NewTxMemPool()
+		atxpool := activation.NewAtxMemPool()
 		sync := NewSync(net, getMesh(dbType, Path+name+"_"+time.Now().String()), txpool, atxpool, blockValidator, poetDb(), conf, ticker, l)
 		nodes = append(nodes, sync)
 		p2ps = append(p2ps, net)
@@ -114,7 +115,7 @@ func getMeshWithLevelDB(id string) *mesh.Mesh {
 	lg := log.New(id, "", "")
 	mshdb, _ := mesh.NewPersistentMeshDB(id, 5, lg)
 	atxdbStore, _ := database.NewLDBDatabase(id+"atx", 0, 0, lg.WithOptions(log.Nop))
-	atxdb := activation.NewDB(atxdbStore, &mockIStore{}, mshdb, 10, &validatorMock{}, lg.WithOptions(log.Nop))
+	atxdb := activation.NewDB(atxdbStore, &mockIStore{}, nil, mshdb, 10, &validatorMock{}, lg.WithOptions(log.Nop))
 	return mesh.NewMesh(mshdb, atxdb, rewardConf, &meshValidatorMock{}, &mockTxMemPool{}, &mockAtxMemPool{}, &mockState{}, lg.WithOptions(log.Nop))
 }
 
@@ -125,7 +126,7 @@ func persistenceTeardown() {
 func getMeshWithMemoryDB(id string) *mesh.Mesh {
 	lg := log.New(id, "", "")
 	mshdb := mesh.NewMemMeshDB(lg)
-	atxdb := activation.NewDB(database.NewMemDatabase(), &mockIStore{}, mshdb, 10, &validatorMock{}, lg.WithName("atxDB"))
+	atxdb := activation.NewDB(database.NewMemDatabase(), &mockIStore{}, nil, mshdb, 10, &validatorMock{}, lg.WithName("atxDB"))
 	return mesh.NewMesh(mshdb, atxdb, rewardConf, &meshValidatorMock{}, &mockTxMemPool{}, &mockAtxMemPool{}, &mockState{}, lg)
 }
 
@@ -663,7 +664,7 @@ func Test_TwoNodes_SyncIntegrationSuite(t *testing.T) {
 		msh := getMesh(memoryDB, fmt.Sprintf("%s_%s", sis.name, time.Now()))
 		blockValidator := blockEligibilityValidatorMock{}
 		poetDb := activation.NewPoetDb(database.NewMemDatabase(), l.WithName("poetDb"))
-		sync := NewSync(s, msh, miner.NewTxMemPool(), miner.NewAtxMemPool(), blockValidator, poetDb, conf, ts, l)
+		sync := NewSync(s, msh, state.NewTxMemPool(), activation.NewAtxMemPool(), blockValidator, poetDb, conf, ts, l)
 		sis.syncers = append(sis.syncers, sync)
 		atomic.AddUint32(&i, 1)
 	}
@@ -788,7 +789,7 @@ func Test_Multiple_SyncIntegrationSuite(t *testing.T) {
 		msh := getMesh(memoryDB, fmt.Sprintf("%s_%d", sis.name, atomic.LoadUint32(&i)))
 		blockValidator := blockEligibilityValidatorMock{}
 		poetDb := activation.NewPoetDb(database.NewMemDatabase(), l.WithName("poetDb"))
-		sync := NewSync(s, msh, miner.NewTxMemPool(), miner.NewAtxMemPool(), blockValidator, poetDb, conf, ts, l)
+		sync := NewSync(s, msh, state.NewTxMemPool(), activation.NewAtxMemPool(), blockValidator, poetDb, conf, ts, l)
 		ts.StartNotifying()
 		sis.syncers = append(sis.syncers, sync)
 		atomic.AddUint32(&i, 1)
@@ -988,6 +989,7 @@ func TestFetchLayerBlockIds(t *testing.T) {
 
 func TestFetchLayerBlockIdsNoResponse(t *testing.T) {
 	// check tx validation
+	types.SetLayersPerEpoch(1)
 	clk := &mockClock{Layer: 6}
 	syncs, nodes := SyncMockFactoryManClock(5, conf, t.Name(), memoryDB, newMockPoetDb, clk)
 	pm1 := getPeersMock([]p2ppeers.Peer{nodes[2].PublicKey()})
@@ -1143,35 +1145,37 @@ func TestSyncer_Synchronise(t *testing.T) {
 
 func TestSyncer_Synchronise2(t *testing.T) {
 	r := require.New(t)
+	types.SetLayersPerEpoch(1)
 	syncs, _, _ := SyncMockFactory(1, conf, t.Name(), memoryDB, newMockPoetDb)
 	sync := syncs[0]
-	sync.AddBlockWithTxs(types.NewExistingBlock(1, []byte(rand.String(8))), nil, nil)
-	sync.AddBlockWithTxs(types.NewExistingBlock(2, []byte(rand.String(8))), nil, nil)
-	sync.AddBlockWithTxs(types.NewExistingBlock(3, []byte(rand.String(8))), nil, nil)
-	sync.AddBlockWithTxs(types.NewExistingBlock(4, []byte(rand.String(8))), nil, nil)
-	sync.AddBlockWithTxs(types.NewExistingBlock(5, []byte(rand.String(8))), nil, nil)
+	gen := types.GetEffectiveGenesis()
+	sync.AddBlockWithTxs(types.NewExistingBlock(1+gen, []byte(rand.String(8))), nil, nil)
+	sync.AddBlockWithTxs(types.NewExistingBlock(2+gen, []byte(rand.String(8))), nil, nil)
+	sync.AddBlockWithTxs(types.NewExistingBlock(3+gen, []byte(rand.String(8))), nil, nil)
+	sync.AddBlockWithTxs(types.NewExistingBlock(4+gen, []byte(rand.String(8))), nil, nil)
+	sync.AddBlockWithTxs(types.NewExistingBlock(5+gen, []byte(rand.String(8))), nil, nil)
 
-	lv := &mockLayerValidator{0, 0, 0, nil}
+	lv := &mockLayerValidator{types.GetEffectiveGenesis(), 0, 0, nil}
 	sync.Mesh.Validator = lv
-	sync.ticker = &mockClock{Layer: 1}
+	sync.ticker = &mockClock{Layer: 1 + gen}
 	r.False(sync.gossipSynced == done)
 
 	// current layer = 0
-	sync.ticker = &mockClock{Layer: 0}
+	sync.ticker = &mockClock{Layer: 0 + gen}
 	sync.synchronise()
 	r.Equal(0, lv.countValidate)
 	r.True(sync.gossipSynced == done)
 
 	// current layer = 1
-	sync.ticker = &mockClock{Layer: 1}
+	sync.ticker = &mockClock{Layer: 1 + gen}
 	sync.synchronise()
 	r.Equal(0, lv.countValidate)
 	r.True(sync.gossipSynced == done)
 
 	// current layer != 1 && weakly-synced
-	lv = &mockLayerValidator{0, 0, 0, nil}
+	lv = &mockLayerValidator{types.GetEffectiveGenesis(), 0, 0, nil}
 	sync.Mesh.Validator = lv
-	sync.ticker = &mockClock{Layer: 2}
+	sync.ticker = &mockClock{Layer: 2 + gen}
 	sync.SetLatestLayer(2)
 	sync.synchronise()
 	r.Equal(1, lv.countValidate)
@@ -1210,8 +1214,8 @@ func TestSyncer_ListenToGossip(t *testing.T) {
 
 func TestSyncer_handleNotSyncedFlow(t *testing.T) {
 	r := require.New(t)
-	txpool := miner.NewTxMemPool()
-	atxpool := miner.NewAtxMemPool()
+	txpool := state.NewTxMemPool()
+	atxpool := activation.NewAtxMemPool()
 	ts := &mockClock{Layer: 10}
 	sync := NewSync(service.NewSimulator().NewNode(), getMesh(memoryDB, Path+t.Name()+"_"+time.Now().String()), txpool, atxpool, blockEligibilityValidatorMock{}, newMockPoetDb(), conf, ts, log.NewDefault(t.Name()))
 	lv := &mockLayerValidator{0, 0, 0, nil}
@@ -1229,8 +1233,8 @@ func TestSyncer_p2pSyncForTwoLayers(t *testing.T) {
 	net := sim.NewNode()
 	l := log.New(t.Name(), "", "")
 	blockValidator := blockEligibilityValidatorMock{}
-	txpool := miner.NewTxMemPool()
-	atxpool := miner.NewAtxMemPool()
+	txpool := state.NewTxMemPool()
+	atxpool := activation.NewAtxMemPool()
 	//ch := ts.Subscribe()
 	msh := getMesh(memoryDB, Path+t.Name()+"_"+time.Now().String())
 
@@ -1600,6 +1604,45 @@ func TestSyncer_BlockSyntacticValidation(t *testing.T) {
 	r.Nil(err)
 }
 
+func TestSyncer_BlockSyntacticValidation_syncRefBlock(t *testing.T) {
+	r := require.New(t)
+	syncs, _, _ := SyncMockFactory(2, conf, "BlockSyntacticValidation_syncRefBlock", memoryDB, newMemPoetDb)
+	s := syncs[0]
+	b := &types.Block{}
+	b.TxIDs = []types.TransactionID{}
+	b.ATXIDs = []types.ATXID{}
+	block1 := types.NewExistingBlock(1, []byte(rand.String(8)))
+	block1.Initialize()
+	block1ID := block1.ID()
+	b.RefBlock = &block1ID
+	_, _, err := s.blockSyntacticValidation(b)
+	r.Equal(err, fmt.Errorf("failed to fetch ref block %v", *b.RefBlock))
+
+	err = syncs[1].AddBlock(block1)
+	r.NoError(err)
+	_, _, err = s.blockSyntacticValidation(b)
+	r.NoError(err)
+}
+
+func TestSyncer_fetchBlock(t *testing.T) {
+	r := require.New(t)
+	syncs, _, _ := SyncMockFactory(2, conf, "fetchBlock", memoryDB, newMemPoetDb)
+	s := syncs[0]
+	b := &types.Block{}
+	b.TxIDs = []types.TransactionID{}
+	b.ATXIDs = []types.ATXID{}
+	block1 := types.NewExistingBlock(1, []byte(rand.String(8)))
+	block1.Initialize()
+	block1ID := block1.ID()
+	res := s.fetchBlock(block1ID)
+	r.False(res)
+	err := syncs[1].AddBlock(block1)
+	r.NoError(err)
+	res = s.fetchBlock(block1ID)
+	r.True(res)
+
+}
+
 func TestSyncer_AtxSetID(t *testing.T) {
 	a := atx("")
 	bbytes, _ := types.InterfaceToBytes(*a)
@@ -1610,7 +1653,6 @@ func TestSyncer_AtxSetID(t *testing.T) {
 	t.Log(fmt.Sprintf("%+v\n", b))
 	t.Log("---------------------")
 	assert.Equal(t, b.Nipst, a.Nipst)
-	assert.Equal(t, b.View, a.View)
 	assert.Equal(t, b.Commitment, a.Commitment)
 
 	assert.Equal(t, b.ActivationTxHeader.NodeID, a.ActivationTxHeader.NodeID)

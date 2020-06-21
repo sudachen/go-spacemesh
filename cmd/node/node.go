@@ -19,9 +19,9 @@ import (
 	"github.com/spacemeshos/go-spacemesh/mesh"
 	"github.com/spacemeshos/go-spacemesh/metrics"
 	"github.com/spacemeshos/go-spacemesh/miner"
-	"github.com/spacemeshos/go-spacemesh/oracle"
 	"github.com/spacemeshos/go-spacemesh/p2p/service"
 	"github.com/spacemeshos/go-spacemesh/pendingtxs"
+	"github.com/spacemeshos/go-spacemesh/priorityq"
 	"github.com/spacemeshos/go-spacemesh/signing"
 	"github.com/spacemeshos/go-spacemesh/state"
 	"github.com/spacemeshos/go-spacemesh/sync"
@@ -79,6 +79,7 @@ const (
 	PoetListenerLogger   = "poetListener"
 	NipstBuilderLogger   = "nipstBuilder"
 	AtxBuilderLogger     = "atxBuilder"
+	GossipListener       = "gossipListener"
 )
 
 // Cmd is the cobra wrapper for the node, that allows adding parameters to it
@@ -153,17 +154,19 @@ type SpacemeshApp struct {
 	blockListener  *sync.BlockListener
 	state          *state.TransactionProcessor
 	blockProducer  *miner.BlockBuilder
-	oracle         *oracle.MinerBlockOracle
+	oracle         *miner.BlockOracle
 	txProcessor    *state.TransactionProcessor
 	mesh           *mesh.Mesh
+	gossipListener *service.Listener
 	clock          TickProvider
 	hare           HareService
 	atxBuilder     *activation.Builder
+	atxDb          *activation.DB
 	poetListener   *activation.PoetListener
 	edSgn          *signing.EdSigner
 	closers        []interface{ Close() }
 	log            log.Log
-	txPool         *miner.TxMempool
+	txPool         *state.TxMempool
 	loggers        map[string]*zap.AtomicLevel
 	term           chan struct{} // this channel is closed when closing services, goroutines should wait on this channel in order to terminate
 }
@@ -328,10 +331,6 @@ func (app *SpacemeshApp) setupGenesis(state *state.TransactionProcessor, msh *me
 	if err != nil {
 		log.Panic("cannot commit genesis state")
 	}
-	err = msh.AddBlock(mesh.GenesisBlock)
-	if err != nil {
-		log.Error("error adding genesis block %v", err)
-	}
 }
 
 func (app *SpacemeshApp) setupTestFeatures() {
@@ -444,6 +443,8 @@ func (app *SpacemeshApp) initServices(nodeID types.NodeID,
 
 	lg := log.NewDefault(name).WithFields(log.NodeID(name))
 
+	types.SetLayersPerEpoch(int32(app.Config.LayersPerEpoch))
+
 	app.log = app.addLogger(AppLogger, lg)
 
 	postClient.SetLogger(app.addLogger(PostLogger, lg))
@@ -488,8 +489,8 @@ func (app *SpacemeshApp) initServices(nodeID types.NodeID,
 		return err
 	}
 
-	app.txPool = miner.NewTxMemPool()
-	atxpool := miner.NewAtxMemPool()
+	app.txPool = state.NewTxMemPool()
+	atxpool := activation.NewAtxMemPool()
 	meshAndPoolProjector := pendingtxs.NewMeshAndPoolProjector(mdb, app.txPool)
 
 	appliedTxs, err := database.NewLDBDatabase(filepath.Join(dbStorepath, "appliedTxs"), 0, 0, lg.WithName("appliedTxs"))
@@ -497,11 +498,10 @@ func (app *SpacemeshApp) initServices(nodeID types.NodeID,
 		return err
 	}
 	app.closers = append(app.closers, appliedTxs)
-	processor := state.NewTransactionProcessor(db, appliedTxs, meshAndPoolProjector, lg.WithName("state"))
+	processor := state.NewTransactionProcessor(db, appliedTxs, meshAndPoolProjector, app.txPool, lg.WithName("state"))
 
-	atxdb := activation.NewDB(atxdbstore, idStore, mdb, layersPerEpoch, validator, app.addLogger(AtxDbLogger, lg))
-	beaconProvider := &oracle.EpochBeaconProvider{}
-	eValidator := oracle.NewBlockEligibilityValidator(layerSize, uint32(app.Config.GenesisActiveSet), layersPerEpoch, atxdb, beaconProvider, BLS381.Verify2, app.addLogger(BlkEligibilityLogger, lg))
+	atxdb := activation.NewDB(atxdbstore, idStore, atxpool, mdb, layersPerEpoch, validator, app.addLogger(AtxDbLogger, lg))
+	beaconProvider := &miner.EpochBeaconProvider{}
 
 	var msh *mesh.Mesh
 	var trtl tortoise.Tortoise
@@ -514,6 +514,7 @@ func (app *SpacemeshApp) initServices(nodeID types.NodeID,
 		msh = mesh.NewMesh(mdb, atxdb, app.Config.REWARD, trtl, app.txPool, atxpool, processor, app.addLogger(MeshLogger, lg))
 		app.setupGenesis(processor, msh)
 	}
+	eValidator := miner.NewBlockEligibilityValidator(layerSize, uint32(app.Config.GenesisActiveSet), layersPerEpoch, atxdb, beaconProvider, BLS381.Verify2, msh, app.addLogger(BlkEligibilityLogger, lg))
 
 	syncConf := sync.Configuration{Concurrency: 4,
 		LayerSize:       int(layerSize),
@@ -535,7 +536,7 @@ func (app *SpacemeshApp) initServices(nodeID types.NodeID,
 	}
 
 	syncer := sync.NewSync(swarm, msh, app.txPool, atxpool, eValidator, poetDb, syncConf, clock, app.addLogger(SyncLogger, lg))
-	blockOracle := oracle.NewMinerBlockOracle(layerSize, uint32(app.Config.GenesisActiveSet), layersPerEpoch, atxdb, beaconProvider, vrfSigner, nodeID, syncer.ListenToGossip, app.addLogger(BlockOracle, lg))
+	blockOracle := miner.NewMinerBlockOracle(layerSize, uint32(app.Config.GenesisActiveSet), layersPerEpoch, atxdb, beaconProvider, vrfSigner, nodeID, syncer.ListenToGossip, app.addLogger(BlockOracle, lg))
 
 	// TODO: we should probably decouple the apptest and the node (and duplicate as necessary) (#1926)
 	var hOracle hare.Rolacle
@@ -546,13 +547,19 @@ func (app *SpacemeshApp) initServices(nodeID types.NodeID,
 		hOracle = eligibility.New(beacon, atxdb.CalcActiveSetSize, BLS381.Verify2, vrfSigner, uint16(app.Config.LayersPerEpoch), app.Config.GenesisActiveSet, mdb, app.Config.HareEligibility, app.addLogger(HareOracleLogger, lg))
 	}
 
+	gossipListener := service.NewListener(swarm, syncer, app.addLogger(GossipListener, lg))
 	ha := app.HareFactory(mdb, swarm, sgn, nodeID, syncer, msh, hOracle, idStore, clock, lg)
 
 	stateAndMeshProjector := pendingtxs.NewStateAndMeshProjector(processor, msh)
-	blockProducer := miner.NewBlockBuilder(nodeID, sgn, swarm, clock.Subscribe(), app.Config.Hdist, app.txPool, atxpool, coinToss, msh, ha, blockOracle, processor, atxdb, syncer, app.Config.AtxsPerBlock, layersPerEpoch, stateAndMeshProjector, app.addLogger(BlockBuilderLogger, lg))
-	blockListener := sync.NewBlockListener(swarm, syncer, 4, app.addLogger(BlockListenerLogger, lg))
+	cfg := miner.Config{
+		Hdist:          app.Config.Hdist,
+		MinerID:        nodeID,
+		AtxsPerBlock:   app.Config.AtxsPerBlock,
+		LayersPerEpoch: layersPerEpoch,
+	}
 
-	msh.SetBlockBuilder(blockProducer)
+	blockProducer := miner.NewBlockBuilder(cfg, sgn, swarm, clock.Subscribe(), coinToss, msh, ha, blockOracle, syncer, stateAndMeshProjector, app.txPool, atxpool, atxdb, app.addLogger(BlockBuilderLogger, lg))
+	blockListener := sync.NewBlockListener(swarm, syncer, 4, app.addLogger(BlockListenerLogger, lg))
 
 	poetListener := activation.NewPoetListener(swarm, poetDb, app.addLogger(PoetListenerLogger, lg))
 
@@ -565,8 +572,12 @@ func (app *SpacemeshApp) initServices(nodeID types.NodeID,
 	}
 	atxBuilder := activation.NewBuilder(nodeID, coinBase, sgn, atxdb, swarm, msh, layersPerEpoch, nipstBuilder, postClient, clock, syncer, store, app.addLogger("atxBuilder", lg))
 
+	gossipListener.AddListener(state.IncomingTxProtocol, priorityq.Low, processor.HandleTxData)
+	gossipListener.AddListener(activation.AtxProtocol, priorityq.Low, atxdb.HandleGossipAtx)
+
 	app.blockProducer = blockProducer
 	app.blockListener = blockListener
+	app.gossipListener = gossipListener
 	app.mesh = msh
 	app.syncer = syncer
 	app.clock = clock
@@ -577,6 +588,8 @@ func (app *SpacemeshApp) initServices(nodeID types.NodeID,
 	app.atxBuilder = atxBuilder
 	app.oracle = blockOracle
 	app.txProcessor = processor
+	app.atxDb = atxdb
+
 	return nil
 }
 
@@ -713,6 +726,8 @@ func (app *SpacemeshApp) stopServices() {
 		app.log.Info("%v closing mesh", app.nodeID.Key)
 		app.mesh.Close()
 	}
+
+	app.gossipListener.Stop()
 
 	// Close all databases.
 	for _, closer := range app.closers {

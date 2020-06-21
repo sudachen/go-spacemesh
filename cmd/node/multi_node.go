@@ -9,6 +9,7 @@ import (
 	"github.com/spacemeshos/go-spacemesh/common/types"
 	"github.com/spacemeshos/go-spacemesh/common/util"
 	"github.com/spacemeshos/go-spacemesh/config"
+	"github.com/spacemeshos/go-spacemesh/database"
 	"github.com/spacemeshos/go-spacemesh/eligibility"
 	"github.com/spacemeshos/go-spacemesh/events"
 	"github.com/spacemeshos/go-spacemesh/log"
@@ -147,9 +148,10 @@ func getTestDefaultConfig() *config.Config {
 	cfg.HareEligibility.ConfidenceParam = 4
 	cfg.HareEligibility.EpochOffset = 0
 	cfg.StartMining = true
-	cfg.SyncRequestTimeout = 2000
+	cfg.SyncRequestTimeout = 500
 	cfg.SyncInterval = 2
 	cfg.SyncValidationDelta = 5
+	types.SetLayersPerEpoch(int32(cfg.LayersPerEpoch))
 	return cfg
 }
 
@@ -255,6 +257,7 @@ func StartMultiNode(numOfinstances, layerAvgSize int, runTillLayer uint32, dbPat
 	name := 'a'
 	for i := 0; i < numOfInstances; i++ {
 		dbStorepath := path + string(name)
+		database.SwitchCreationContext(dbStorepath, string(name))
 		smApp, err := InitSingleInstance(*cfg, i, genesisTime, rng, dbStorepath, rolacle, poetHarness.HTTPPoetClient, clock, net)
 		if err != nil {
 			log.Error("cannot run multi node %v", err)
@@ -312,7 +315,7 @@ loop:
 				continue
 			}
 			log.Info("all miners got blocks for layer: %v created: %v received: %v", layer, eventDb.GetNumOfCreatedBlocks(layer), eventDb.GetReceivedBlocks(layer))
-			epoch := layer.GetEpoch(uint16(cfg.LayersPerEpoch))
+			epoch := layer.GetEpoch()
 			if !(eventDb.GetAtxCreationDone(epoch) >= numOfInstances && eventDb.GetAtxCreationDone(epoch)%numOfInstances == 0) {
 				log.Info("atx not created %v in epoch %v, created only %v atxs", numOfInstances-eventDb.GetAtxCreationDone(epoch), epoch, eventDb.GetAtxCreationDone(epoch))
 				time.Sleep(500 * time.Millisecond)
