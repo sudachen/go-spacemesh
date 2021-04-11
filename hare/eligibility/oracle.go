@@ -134,10 +134,10 @@ func (o *Oracle) buildVRFMessage(layer types.LayerID, round int32) ([]byte, erro
 	key := buildKey(layer, round)
 
 	o.lock.Lock()
-	defer o.lock.Unlock()
 
 	// check cache
 	if val, exist := o.vrfMsgCache.Get(key); exist {
+		o.lock.Unlock()
 		return val.([]byte), nil
 	}
 
@@ -145,6 +145,7 @@ func (o *Oracle) buildVRFMessage(layer types.LayerID, round int32) ([]byte, erro
 	v, err := o.beacon.Value(layer)
 	if err != nil {
 		o.With().Error("Could not get hare Beacon value", log.Err(err), layer, log.Int32("round", round))
+		o.lock.Unlock()
 		return nil, err
 	}
 
@@ -154,12 +155,14 @@ func (o *Oracle) buildVRFMessage(layer types.LayerID, round int32) ([]byte, erro
 	_, err = xdr.Marshal(&w, &msg)
 	if err != nil {
 		o.With().Error("Fatal: could not marshal xdr", log.Err(err))
+		o.lock.Unlock()
 		return nil, err
 	}
 
 	val := w.Bytes()
 	o.vrfMsgCache.Add(key, val) // update cache
 
+	o.lock.Unlock()
 	return val, nil
 }
 
@@ -209,49 +212,49 @@ func calcVrfFrac(sig []byte) fixed.Fixed {
 	return fixed.FracFromBytes(sha[:8])
 }
 
-func (o *Oracle) prepareEligibilityCheck(layer types.LayerID, round int32, committeeSize int, id types.NodeID, sig []byte) (fixed.Fixed, fixed.Fixed, fixed.Fixed, bool, error) {
+func (o *Oracle) prepareEligibilityCheck(layer types.LayerID, round int32, committeeSize int, id types.NodeID, sig []byte) (int, fixed.Fixed, fixed.Fixed, bool, error) {
 	msg, err := o.buildVRFMessage(layer, round)
 	if err != nil {
 		o.Error("eligibility: could not build VRF message")
-		return fixed.Fixed{}, fixed.Fixed{}, fixed.Fixed{}, true, err
+		return 0, fixed.Fixed{}, fixed.Fixed{}, true, err
 	}
 
 	// validate message
 	res, err := o.vrfVerifier(msg, sig, id.VRFPublicKey)
 	if err != nil {
 		o.Error("eligibility: VRF verification failed: %v", err)
-		return fixed.Fixed{}, fixed.Fixed{}, fixed.Fixed{}, true, err
+		return 0, fixed.Fixed{}, fixed.Fixed{}, true, err
 	}
 	if !res {
 		o.With().Info("eligibility: a node did not pass VRF signature verification",
 			id,
 			layer)
-		return fixed.Fixed{}, fixed.Fixed{}, fixed.Fixed{}, true, nil
+		return 0, fixed.Fixed{}, fixed.Fixed{}, true, nil
 	}
 
 	// get active set size
 	totalWeight, err := o.totalWeight(layer)
 	if err != nil {
-		return fixed.Fixed{}, fixed.Fixed{}, fixed.Fixed{}, true, err
+		return 0, fixed.Fixed{}, fixed.Fixed{}, true, err
 	}
 
 	// require totalWeight > 0
 	if totalWeight == 0 {
 		o.Warning("eligibility: total weight is zero")
-		return fixed.Fixed{}, fixed.Fixed{}, fixed.Fixed{}, true, errors.New("total weight is zero")
+		return 0, fixed.Fixed{}, fixed.Fixed{}, true, errors.New("total weight is zero")
 	}
 
 	// calc hash & check threshold
 	minerWeight, err := o.minerWeight(layer, id)
 	if err != nil {
-		return fixed.Fixed{}, fixed.Fixed{}, fixed.Fixed{}, true, err
+		return 0, fixed.Fixed{}, fixed.Fixed{}, true, err
 	}
 
 	// ensure miner weight fits in int
 	if uint64(int(minerWeight)) != minerWeight {
 		panic(fmt.Sprintf("minerWeight overflows int (%d)", minerWeight))
 	}
-	n := fixed.New(int(minerWeight))
+	n := int(minerWeight)
 
 	// calc p
 	p := fixed.One
@@ -275,15 +278,15 @@ func (o *Oracle) Validate(layer types.LayerID, round int32, committeeSize int, i
 	defer func() {
 		if msg := recover(); msg != nil {
 			o.Log.With().Error("panic in Validate",
-				log.Uint64("n", uint64(n.Value())),
-				log.Uint64("p", uint64(p.Value())),
+				log.Uint64("n", uint64(n)),
+				log.String("p", p.String()),
 			)
 			panic(msg)
 		}
 	}()
 
-	x := fixed.New(int(eligibilityCount))
-	if !fixed.BinCDF(n, p, x.Sub(fixed.One)).GreaterThan(vrfFrac) && vrfFrac.LessThan(fixed.BinCDF(n, p, x)) {
+	x := int(eligibilityCount)
+	if !fixed.BinCDF(n, p, x-1).GreaterThan(vrfFrac) && vrfFrac.LessThan(fixed.BinCDF(n, p, x)) {
 		return true, nil
 	}
 	o.With().Warning("eligibility: node did not pass VRF eligibility threshold",
@@ -291,10 +294,10 @@ func (o *Oracle) Validate(layer types.LayerID, round int32, committeeSize int, i
 		log.Int32("round", round),
 		log.Int("committee_size", committeeSize),
 		id,
-		log.Int("eligibilityCount", int(eligibilityCount)),
-		log.Int("n", n.Floor()),
+		log.Uint64("eligibilityCount", uint64(eligibilityCount)),
+		log.Uint64("n", uint64(n)),
 		log.String("p", fmt.Sprintf("%g", p.Float())),
-		log.Int("x", x.Floor()),
+		log.Uint64("x", uint64(x)),
 	)
 	return false, nil
 }
@@ -310,32 +313,32 @@ func (o *Oracle) CalcEligibility(layer types.LayerID, round int32, committeeSize
 	defer func() {
 		if msg := recover(); msg != nil {
 			o.Log.With().Error("panic in CalcEligibility",
-				log.Uint64("n", uint64(n.Value())),
-				log.Uint64("p", uint64(p.Value())),
+				log.Int("n", n),
+				log.String("p", p.String()),
 			)
 			panic(msg)
 		}
 	}()
 
-	for x := fixed.New(0); x.Value() < n.Value(); x = x.Add(fixed.One) {
+	for x := 0; x < n; x++ {
 		if fixed.BinCDF(n, p, x).GreaterThan(vrfFrac) {
-			return uint16(x.Floor()), nil
+			return uint16(x), nil
 		}
 	}
-	return uint16(n.Floor()), nil
+	return uint16(n), nil
 }
 
 // Proof returns the role proof for the current Layer & Round
 func (o *Oracle) Proof(layer types.LayerID, round int32) ([]byte, error) {
 	msg, err := o.buildVRFMessage(layer, round)
 	if err != nil {
-		o.With().Error("proof: could not build VRF message", log.Err(err))
+		o.Error("Proof: could not build VRF message err=%v", err)
 		return nil, err
 	}
 
 	sig, err := o.vrfSigner.Sign(msg)
 	if err != nil {
-		o.With().Error("proof: could not sign VRF message", log.Err(err))
+		o.Error("Proof: could not sign VRF message err=%v", err)
 		return nil, err
 	}
 
@@ -347,7 +350,7 @@ func (o *Oracle) actives(layer types.LayerID) (map[string]uint64, error) {
 	sl := roundedSafeLayer(layer, types.LayerID(o.cfg.ConfidenceParam), o.layersPerEpoch, types.LayerID(o.cfg.EpochOffset))
 	safeEp := sl.GetEpoch()
 
-	o.With().Info("safe layer and epoch", sl, safeEp)
+	o.Debug("safe layer %v, epoch %v", sl, safeEp)
 	// check genesis
 	// genesis is for 3 epochs with hare since it can only count active identities found in blocks
 	if safeEp < 3 {
@@ -357,43 +360,41 @@ func (o *Oracle) actives(layer types.LayerID) (map[string]uint64, error) {
 	// lock until any return
 	// note: no need to lock per safeEp - we do not expect many concurrent requests per safeEp (max two)
 	o.lock.Lock()
-	defer o.lock.Unlock()
 
 	// check cache
 	if val, exist := o.activesCache.Get(safeEp); exist {
+		o.lock.Unlock()
 		return val.(map[string]uint64), nil
 	}
 
 	// build a map of all blocks on the current layer
 	mp, err := o.blocksProvider.ContextuallyValidBlock(sl)
 	if err != nil {
+		o.lock.Unlock()
 		return nil, err
 	}
 
 	// no contextually valid blocks
 	if len(mp) == 0 {
-		o.With().Error("could not calculate hare active set size: no contextually valid blocks",
-			layer,
-			layer.GetEpoch(),
-			log.FieldNamed("safe_layer_id", sl),
-			log.FieldNamed("safe_epoch_id", safeEp))
+		o.With().Error("Could not calculate hare active set size: no contextually valid blocks",
+			layer, layer.GetEpoch(),
+			log.FieldNamed("safe_layer_id", sl), log.FieldNamed("safe_epoch_id", safeEp))
+		o.lock.Unlock()
 		return nil, errNoContextualBlocks
 	}
 
 	activeMap, err := o.getActiveSet(safeEp-1, mp)
 	if err != nil {
-		o.With().Error("could not retrieve active set size",
-			log.Err(err),
-			layer,
-			layer.GetEpoch(),
-			log.FieldNamed("safe_layer_id", sl),
-			log.FieldNamed("safe_epoch_id", safeEp))
+		o.With().Error("Could not retrieve active set size", log.Err(err), layer, layer.GetEpoch(),
+			log.FieldNamed("safe_layer_id", sl), log.FieldNamed("safe_epoch_id", safeEp))
+		o.lock.Unlock()
 		return nil, err
 	}
 
 	// update
 	o.activesCache.Add(safeEp, activeMap)
 
+	o.lock.Unlock()
 	return activeMap, nil
 }
 
@@ -406,8 +407,7 @@ func (o *Oracle) IsIdentityActiveOnConsensusView(edID string, layer types.LayerI
 			return true, nil // all ids are active in genesis
 		}
 
-		o.With().Error("method IsIdentityActiveOnConsensusView erred while calling actives func",
-			layer, log.Err(err))
+		o.With().Error("IsIdentityActiveOnConsensusView erred while calling actives func", layer, log.Err(err))
 		return false, err
 	}
 	_, exist := actives[edID]
